@@ -30,7 +30,7 @@ function [radiance] = planks_function(wavelengths,temperatures,wavelength_units)
 
 % define constants
 
-h = 6.626e-34; % Joules/sec - planks constant
+h = 6.626e-34; % Joules * sec - planks constant
 c = 299792458; % meters/s - speed of light
 k = 1.3806e-23; % J/Kelvin - Boltzmann constant
 
@@ -38,28 +38,36 @@ radiance = zeros(length(temperatures),length(wavelengths));
 
 if strcmp(wavelength_units,'microns')
     
-    h = h * (1e6)^2; % converts h to microns
-    c = c * (1e6); % converts c to microns per secon
-    k = k * (1e6)^2; % converts k to microns
+    % convert wavelenghts to meters
+    wavelengths = wavelengths .* 1/1e6; % meters
     
     for ii = 1:length(temperatures)
         
         radiance(ii,:) = 2*h*c^2./(wavelengths.^5 .*(exp(h*c./(wavelengths*k*temperatures(ii))) - 1));
         
     end
+    
+    % radiance now has units of W/m^3/sr. We need to convert this to be
+    % W/m^2/micron/sr
+    
+    radiance = radiance.* 1/1e6; % - W/m^2/micron/sr
     
     
 elseif strcmp(wavelength_units,'nanometers')
     
-    h = h * (1e9)^2; % converts h to microns
-    c = c * (1e9); % converts c to microns per secon
-    k = k * (1e9)^2; % converts k to microns
+    % convert wavelenghts to meters
+    wavelengths = wavelengths .* 1/1e9; % meters
     
     for ii = 1:length(temperatures)
         
         radiance(ii,:) = 2*h*c^2./(wavelengths.^5 .*(exp(h*c./(wavelengths*k*temperatures(ii))) - 1));
         
     end
+    
+    % radiance now has units of W/m^3/sr. We need to convert this to be
+    % W/m^2/nm/sr
+    
+    radiance = radiance.* 1/1e9; % - W/m^2/micron/sr
     
 end
 
