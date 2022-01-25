@@ -11,7 +11,8 @@
 
 % (2) - temperature - a row vector. For each temperature, we create a
 % row vector of radiance across the wavelengths defined by the user.
-% units are in kelvin
+% units are in kelvin. The temperature of the photosphere of the sun is
+% 5778 K
 
 % (3) - wavelength_units - a string defining the units to use for both the
 % input and the output. The options are:
