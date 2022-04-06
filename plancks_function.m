@@ -70,6 +70,11 @@ elseif strcmp(wavelength_units,'nanometers')
     
     radiance = radiance.* 1/1e9; % - W/m^2/micron/sr
     
+else
+    
+    error([newline,'I dont recognize your input for units. Acceptable inputs are: "microns"',...
+        ' or "nanometers".'])
+    
 end
 
 
