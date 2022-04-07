@@ -9,38 +9,74 @@
 %   (2) N0 - total droplet concentration (cm^(-3)) - this is the total
 %   droplet number concentration including all sizes. 
 
-%   (3) z - altitude above sea level (kilometers) - this is a vector with
-%   the same length as re. The first value defines the base of
-%   the cloud. If there are multiple values, each entry defines the start
-%   of the next layer where the re value changes.
-
-%   (4) H - geometric thickness of the cloud (kilometers) - this is a
-%   single value that defines the total geometric cloud thickness.
-
-%   (5) lambda - wavelength that defines the cloud optical depth
-%   (nanometers) - This is the wavelength that defines the cloud optical
-%   depth. There should only be one value!
-
-%   (6) distribution_str - a string telling the code with droplet size 
-%   distribution to use  - One can chose from two options:
-%       (a) 'mono' - monodispersed distribution
-%       (b) 'gamma' - gamma droplet distribution. By default this will use
-%       a gamma distribution with an alpha value of 7, which is typical for
-%       liquid water clouds.
+%   (3) alpha - paramter that is at least 1, and can be as large as you
+%   want. The defines the spread of our distribution
 
 % OUTPUTS:
-%   (1) .Dat file saved in the libRadTran folder:
-%   /.../libRadtran-2.0.4/data/wc
+%   (1) n(r) - the number concentration of droplets for a given radius r -
+%   this output is a vector of the same length as r, which is a hard-coded
+%   vector
 
-% All look up tables were computed using the opensoure radiative transfer
-% code, LibRadTran
 
 % By Andrew John Buggee
 %%
-function [outputArg1,outputArg2] = untitled4(inputArg1,inputArg2)
-%UNTITLED4 Summary of this function goes here
-%   Detailed explanation goes here
-outputArg1 = inputArg1;
-outputArg2 = inputArg2;
+
+function [nr, r] = gamma_drop_dist(re,N0, alpha)
+
+
+% ------------------------------------------------------------
+% ---------------------- CHECK INPUTS ------------------------
+% ------------------------------------------------------------
+
+% Check to make sure there are 3 inputs, droplet radius, cloud optical
+% depth, and the altitude vector associated with this cloud
+
+
+if nargin~=3
+    error([newline,'Not enough inputs. Need 3: droplet effective radius, total number concentration, and the alpha parameter value.', newline])
+end
+
+% Check to make sure re is the same length as the altitude vector
+
+if alpha<1
+
+    error([newline,'The alpha parameter cannot be less than 1', newline])
+end
+
+if N0<0
+    
+    error([newline,'The number concentration must be greater than 0!', newline])
+end
+
+if re<0
+    
+    error([newline,'The effective droplet radius must be greater than 0!',newline])
+end
+
+
+%%
+
+
+% ------------------------------------------------------------
+% --------------- Create Droplet Distribution ----------------
+% ------------------------------------------------------------
+
+
+
+
+
+% create the r vector based on the input value for the effective droplet
+% radius
+
+r = linspace(re/10, re*10, 100);      % microns - r vector that spans our function
+
+% ------------------------------------------------------------
+% --------------- THIS COMPUTATION IS INCORRECT!!!!!! --------
+% ------------------------------------------------------------
+nr = N0*r.^alpha .* exp(-(alpha+3)*r./re);       % cm^-3 - number concentration at a given r value
+
+
+
+
 end
 
