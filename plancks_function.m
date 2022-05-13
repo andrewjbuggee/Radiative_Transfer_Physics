@@ -27,7 +27,7 @@
 % By Andrew J. Buggee
 %%
 
-function [radiance] = planks_function(wavelengths,temperatures,wavelength_units)
+function [radiance] = plancks_function(wavelengths,temperatures,wavelength_units)
 
 % define constants
 
