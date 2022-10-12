@@ -1,7 +1,7 @@
 # Transmission Spectrum through Earth Atmosphere 
 # Solar Zenith Angle = 0, Viewing Zenith Angle = 0 
 # Using 1976 US Standard Atmosphere - afglus.dat 
-wavelength   T 
+# wavelength   T 
 250.00 0.000000 
 250.10 0.000000 
 250.20 0.000000 
