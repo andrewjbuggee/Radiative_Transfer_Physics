@@ -11,11 +11,14 @@ function [F_norm, final_state, photon_tracking] = twoStream_monteCarlo(inputs)
 tau_upper_limit = inputs.tau_upper_limit;
 tau_lower_limit = inputs.tau_lower_limit;
 
+% Define the albedo of the lower tau boundary
+albedo_maxTau = inputs.albedo_maxTau;
+
 % Define the number of photons to inject into the medium
 N_photons = inputs.N_photons;
 
 % define the wavelength
-wavelength = inputs.wavelength;           % nanometers 
+wavelength = inputs.wavelength;           % nanometers
 
 % Define the size of the scatterer and its scattering properties
 % Assuming a pure homogenous medium composed of a single substance
@@ -88,7 +91,7 @@ absorbed_index = [];
 
 
 
-parfor nn = 1:N_photons
+for nn = 1:N_photons
 
 
 
@@ -112,10 +115,10 @@ parfor nn = 1:N_photons
     % *****----- Roll dice and move photon forward -----******
     % --------------------------------------------------------
 
-    % We start by drawing a value from our uniform distribution
-    x_draw = rand(1,1);
-    % Next we plug this in to our dT/dx relationship
-    tau_sample = tau(x_draw);
+    % We start by drawing a value from our uniform distribution and
+    % inserting it into the distribution that describes the probability of
+    % travelling a distance tau (dT/dx relationship)
+    tau_sample = tau(rand(1,1));
 
     % This tells us how far our photon travels before something happens.
 
@@ -133,24 +136,69 @@ parfor nn = 1:N_photons
 
     if depth_travelled{nn}(end)>tau_upper_limit
 
-        % The photon has scattered out the bottom of our medium with a
-        % single scattering or absorption event!
+        % The photon has transmitted right through our medium with any
+        % scattering or absorption events.
 
-        % let's set the final depth_travelled value to be the
-        % tau limit
-        depth_travelled{nn}(end) = tau_upper_limit;
-        % Let's record which boundary the photon surpassed
-        scatter_out_bottom = scatter_out_bottom + 1;
+        % ------------------------------------------------------
+        % **** Did our photon reflect back into our medium? ****
+        % ------------------------------------------------------
 
-        % record the index
-        scatter_out_bottom_index = [scatter_out_bottom_index, nn];
+        % When our photon reaches the lower boudnary, we will check to see
+        % if the photon is absorbed or scattered back into the medium by
+        % comparing a random uniform number drawing with the albedo
+
+        scat_or_abs = rand(1,1);
+
+        if scat_or_abs<=albedo_maxTau
+            % The photon is scattered back into our medium!!
+
+            % First, set the distance travelled to be the boundary
+            % condition value, since we are treating this as a hard
+            % boundary
+            depth_travelled{nn}(end) = tau_upper_limit;
+
+            % Photon switches direction and is back scattered
+            direction{nn}(end+1) = -1*direction{nn}(end);       % switches direction (back scattered)
+
+            % --------------------------------------------------------
+            % *****----- Roll dice and move photon forward -----******
+            % --------------------------------------------------------
+
+            % Determine how far the photon travels after being scattered
+            % back into our medium
+            tau_sample = tau(rand(1,1));
+
+            % we need to keep track of where the photon is within our medium
+            % Start by giving each vector a 0 to show the starting point at time
+            % t=0
+            depth_travelled{nn}(end+1) = direction{nn}(end)*tau_sample + depth_travelled{nn}(end);
+
+
+        else
+
+            % Our photon was absorbed
+
+
+            % let's set the final depth_travelled value to be the
+            % tau limit
+            depth_travelled{nn}(end) = tau_upper_limit;
+            % Let's record which boundary the photon surpassed
+            scatter_out_bottom = scatter_out_bottom + 1;
+
+            % record the index
+            scatter_out_bottom_index = [scatter_out_bottom_index, nn];
+
+
+
+        end
 
 
 
     else
 
         % If the photon does not travel through the medium on the first tau
-        % draw, then it is either scattered or absorbed
+        % draw, or if it is scattered back into our medium due to the bottom
+        % boundary, then we redraw a tau and continue its life.
 
 
         % --------------------------------------------------------
@@ -245,18 +293,64 @@ parfor nn = 1:N_photons
             elseif depth_travelled{nn}(end)>tau_upper_limit
 
                 % The photon has scattered out the bottom of our medium
-                % If so, let's set the final depth_travelled value to be the
-                % tau limit
-                depth_travelled{nn}(end) = tau_upper_limit;
-                % Let's record which boundary the photon surpassed
-                scatter_out_bottom = scatter_out_bottom + 1;
-
-                % record the index
-
-                scatter_out_bottom_index = [scatter_out_bottom_index, nn];
 
 
-                break
+                % ------------------------------------------------------
+                % **** Did our photon reflect back into our medium? ****
+                % ------------------------------------------------------
+
+                % When our photon reaches the lower boudnary, we will check to see
+                % if the photon is absorbed or scattered back into the medium by
+                % comparing a random uniform number drawing with the albedo
+
+                scat_or_abs = rand(1,1);
+
+                if scat_or_abs<=albedo_maxTau
+                    % The photon is scattered back into our medium!!
+
+                    % First, set the distance travelled to be the boundary
+                    % condition value, since we are treating this as a hard
+                    % boundary
+                    depth_travelled{nn}(end) = tau_upper_limit;
+
+                    % Photon switches direction and is back scattered
+                    direction{nn}(end+1) = -1*direction{nn}(end);       % switches direction (back scattered)
+
+                    % --------------------------------------------------------
+                    % *****----- Roll dice and move photon forward -----******
+                    % --------------------------------------------------------
+
+                    % Determine how far the photon travels after being scattered
+                    % back into our medium
+                    tau_sample = tau(rand(1,1));
+
+                    % we need to keep track of where the photon is within our medium
+                    % Start by giving each vector a 0 to show the starting point at time
+                    % t=0
+                    depth_travelled{nn}(end+1) = direction{nn}(end)*tau_sample + depth_travelled{nn}(end);
+
+
+                else
+
+                    % Our photon was absorbed by the lower boundary
+
+
+                    % let's set the final depth_travelled value to be the
+                    % tau limit
+                    depth_travelled{nn}(end) = tau_upper_limit;
+                    % Let's record which boundary the photon surpassed
+                    scatter_out_bottom = scatter_out_bottom + 1;
+
+                    % record the index
+                    scatter_out_bottom_index = [scatter_out_bottom_index, nn];
+
+
+                    break
+
+
+
+                end
+
 
             end
 
@@ -312,7 +406,7 @@ parfor nn = 1:N_photons
 end
 
 
-
+%%
 
 % ----------------------------------------------------------------------------------
 % *** Divide the tau space into a grid and compute reflectance and transmittance ***
@@ -352,7 +446,6 @@ for nn=1:N_photons
         % Check to see if the photon is moving down or up and check to see
         % if its continuing along the same direction, or it it's switched
         % directions
-
 
         % ----------------------------------------
         % **** Photon continuing to move down ****
@@ -440,6 +533,16 @@ for nn=1:N_photons
                 bins_photon_moves_through(find(bins_photon_moves_through,1)-1) = 1;
             end
 
+            % Some photons in the category will reflect off the bottom
+            % boudnary. If this happened, we simply need to remove the
+            % logical true value for the binEdge equal to tau_upper_limit.
+            % If we don't we get an error, and all we need to keep track of
+            % is whether or not the photon passed through this bin
+            if bins_photon_moves_through(end)==true && (depth_travelled{nn}(tt)==tau_upper_limit || depth_travelled{nn}(tt+1)==tau_upper_limit)
+                bins_photon_moves_through(end) = 0;
+            end
+
+
             N_counts_moving_up(bins_photon_moves_through) = N_counts_moving_up(bins_photon_moves_through) +1;
 
 
@@ -486,7 +589,7 @@ final_state.scatter_out_bottom_INDEX = scatter_out_bottom_index;
 final_state.absorbed_INDEX = absorbed_index;
 
 
-% output other photon tracking variables that I've computed 
+% output other photon tracking variables that I've computed
 
 % keep track of the maximum penetration depth of each photon
 photon_tracking.maxDepth = max_depth;

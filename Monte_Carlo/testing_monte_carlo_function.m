@@ -9,27 +9,30 @@ clear variables
 
 % Define the boundaries of the medium
 inputs.tau_lower_limit = 0;
-inputs.tau_upper_limit = 20;
+inputs.tau_upper_limit = 10;
+
+% Define the albedo of the bottom boundary (tau upper limit)
+inputs.albedo_maxTau = 0.05;
 
 % Define the number of photons to inject into the medium
-inputs.N_photons = 100000;
+inputs.N_photons = 10000;
 
 % define the wavelength
 inputs.wavelength = 500;           % nanometers
-inputs.wavelength = 100;          % nanometers
+inputs.wavelength = 1950;          % nanometers
 
 % Define the size of the scatterer and its scattering properties
 % Assuming a pure homogenous medium composed of a single substance
 
-inputs.radius = 500;                     % microns
+inputs.radius = 10;                     % microns
 
 % ------------------------------------------------------------------
 % Run Mie calculation to obtain single scatering albedo and asymmetry
 % parameter
 % ------------------------------------------------------------------
 
-inputs.mie.distribution = 'gamma';           % droplet distribution
-inputs.mie.distribution_width = 7;
+inputs.mie.distribution = 'mono';           % droplet distribution
+inputs.mie.distribution_width = 0;
 inputs.mie.mie_program = 'MIEV0';               % type of mie algorithm to run
 inputs.mie.err_msg_str = 'verbose';
 inputs.mie.indexOfRefraction = 'water';
@@ -48,13 +51,11 @@ runMIE(mie_folder,input_filename,output_filename);
 % Read the output of the mie file
 [ds,~,~] = readMIE(mie_folder,output_filename);
 
+% Define the single scattering albedo 
+inputs.ssa = ds.ssa;
 
-
-%% Let's create a medium made of liquid water spheres of
-mie_properties_water = interp_mie_computed_tables([inputs.wavelength, inputs.radius],'mono',false);
-
-inputs.ssa = mie_properties_water(6);
-inputs.g = mie_properties_water(7);
+% Define the asymmetry parameter
+inputs.g = ds.asymParam;
 
 
 %% Run 2 stream monte carlo code

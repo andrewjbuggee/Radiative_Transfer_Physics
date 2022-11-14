@@ -17,6 +17,11 @@ g = inputs.g;
 tau_lower_limit = inputs.tau_lower_limit;
 tau_upper_limit = inputs.tau_upper_limit;
 
+% Define the albedo of the lower boundary in our model
+albedo_maxTau = inputs.albedo_maxTau;
+
+
+
 binEdges = F_norm.binEdges;
 
 
@@ -42,12 +47,13 @@ if ssa<1
         C1 = [8.492724501845559e-01     5.437108503990062e-02     9.681090252965144e-01];
         C2 = [4.843239544631898e-01     7.049687413641152e-01     6.568033076805693e-01];
 
-        figure; plot(tau, photon_fraction_up(tau),'Color',C1)
+        figure; plot(photon_fraction_up(tau),tau,'Color',C1)
         hold on;
-        plot(tau, photon_fraction_down(tau), 'Color',C2)
-        plot(binEdges(1:end-1)+diff(binEdges)/2, F_norm.up,'Color',C1,'LineStyle','--')
-        plot(binEdges(1:end-1)+diff(binEdges)/2, F_norm.down,'Color',C2,'LineStyle','--')
+        plot(photon_fraction_down(tau),tau, 'Color',C2)
+        plot(F_norm.up,binEdges(1:end-1)+diff(binEdges)/2,'Color',C1,'LineStyle',':')
+        plot(F_norm.down,binEdges(1:end-1)+diff(binEdges)/2, 'Color',C2,'LineStyle',':')
         grid on; grid minor
+        set(gca,'YDir','reverse')
         ylabel('$F/F_0$','Interpreter','latex');
         xlabel('$\tau$','Interpreter','latex');
         title({'Comparing analytical 2 stream with Monte Carlo',...
@@ -71,10 +77,8 @@ if ssa<1
 
 
     elseif tau_upper_limit>0 && tau_upper_limit<inf
-        
-        % Define the albedo of the lower boundary in our model
-        albedo_lowerBoundary = 0;
-        
+
+
         % K is defined in Bohren and Clothiaux (eq. 5.70)
         K = sqrt((1 - ssa)*(1 - g*ssa));
         % Define the reflectivity at the top of our layer, the photons that
@@ -82,38 +86,56 @@ if ssa<1
         R_inf = (sqrt(1-ssa*g) - sqrt(1 - ssa))/(sqrt(1-ssa*g) + sqrt(1 - ssa));
 
         % Define the constants
-        A = (R_inf - albedo_lowerBoundary)*exp(-K*tau_upper_limit)/...
-            (R_inf*(R_inf - albedo_lowerBoundary)*exp(-K*tau_upper_limit) - (1 - albedo_lowerBoundary*R_inf)*exp(K*tau_upper_limit));
+        A = (R_inf - albedo_maxTau)*exp(-K*tau_upper_limit)/...
+            (R_inf*(R_inf - albedo_maxTau)*exp(-K*tau_upper_limit) - (1 - albedo_maxTau*R_inf)*exp(K*tau_upper_limit));
 
-        B = -(1 - R_inf*albedo_lowerBoundary)*exp(K*tau_upper_limit)/...
-            (R_inf*(R_inf - albedo_lowerBoundary)*exp(-K*tau_upper_limit) - (1 - albedo_lowerBoundary*R_inf)*exp(K*tau_upper_limit));
+        B = -(1 - R_inf*albedo_maxTau)*exp(K*tau_upper_limit)/...
+            (R_inf*(R_inf - albedo_maxTau)*exp(-K*tau_upper_limit) - (1 - albedo_maxTau*R_inf)*exp(K*tau_upper_limit));
 
         photon_fraction_up = @(tau) A*exp(K*tau) + B*R_inf*exp(-K*tau);
 
-                
+
         photon_fraction_down = @(tau) A*R_inf*exp(K*tau) + B*exp(-K*tau);
 
 
-                % lets plot some range of tau
+        % lets plot some range of tau
         tau = linspace(tau_lower_limit,tau_upper_limit,100);
 
         C1 = [8.492724501845559e-01     5.437108503990062e-02     9.681090252965144e-01];
         C2 = [4.843239544631898e-01     7.049687413641152e-01     6.568033076805693e-01];
 
-        figure; plot(tau, photon_fraction_up(tau),'Color',C1)
+        figure; plot(photon_fraction_up(tau),tau,'Color',C1)
         hold on;
-        plot(tau, photon_fraction_down(tau), 'Color',C2)
-        plot(binEdges(1:end-1)+diff(binEdges)/2, F_norm.up,'Color',C1,'LineStyle',':')
-        plot(binEdges(1:end-1)+diff(binEdges)/2, F_norm.down,'Color',C2,'LineStyle',':')
+        plot(photon_fraction_down(tau),tau, 'Color',C2)
+        plot(F_norm.up,binEdges(1:end-1)+diff(binEdges)/2,'Color',C1,'LineStyle',':')
+        plot(F_norm.down,binEdges(1:end-1)+diff(binEdges)/2, 'Color',C2,'LineStyle',':')
         grid on; grid minor
-        ylabel('$F/F_0$','Interpreter','latex');
-        xlabel('$\tau$','Interpreter','latex');
+        set(gca,'YDir','reverse')
+        xlabel('$F/F_0$','Interpreter','latex');
+        ylabel('$\tau$','Interpreter','latex');
         title({'Comparing analytical 2 stream with Monte Carlo',...
             'for an absorbing medium of finite thickness'}, 'Interpreter','latex')
         legend('$F_{\uparrow}/F_0$ analytical','$F_{\downarrow}/F_0$ analytical',...
             '$F_{\uparrow}/F_0$ Monte Carlo','$F_{\downarrow}/F_0$ Monte Carlo','Interpreter','latex',...
             'Location','best')
         set(gcf, 'Position',[0 0 1000 630])
+
+
+        dim = [0.7 0.85 0 0];
+
+        texBox_str = {[num2str(inputs.N_photons),' photons'],...
+            ['$\lambda$ = ',num2str(inputs.wavelength), ' $nm$'],...
+            ['$\tilde{\omega}$ = ', num2str(inputs.ssa)], ...
+            ['$g$ = ', num2str(inputs.g)],...
+            ['$r$ = ', num2str(inputs.radius), ' $\mu m$'],...
+            ['$\tau_0$ = ', num2str(inputs.tau_upper_limit)],...
+            ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
+        t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
+        t.Color = 'white';
+        t.FontSize = 25;
+        t.FontWeight = 'bold';
+        t.EdgeColor = 'white';
+        t.FitBoxToText = 'on';
 
 
     end

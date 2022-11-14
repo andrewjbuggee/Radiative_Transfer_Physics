@@ -78,18 +78,34 @@ end
 
 % Compute the distribution
 
-N = 1/(sigma * sqrt(2*pi));                              % normalization constant
-
-
-
+% -------------------------------------------------------------------------------------
 % formula according to https://www.itl.nist.gov/div898/handbook/eda/section3/eda3669.htm
 % in this formulation below, r_modal is the mean of the log of the
-% distribution
+% distribution and must be atleast 0. So if you want the mode to be x, then
+% the input to this distribution should be r_modal = log(x)
+
+N = 1/(sigma * sqrt(2*pi));                              % normalization constant
 n_r = N0* N./r .* exp(-(log(r) - r_modal).^2 ./(2*sigma.^2));                            % gamma droplet distribution
+% -------------------------------------------------------------------------------------
 
 
-% formal according to Cloud Optics by Kokhanovsky
+% -------------------------------------------------------------------------------------
+%N = 1/(sigma * sqrt(2*pi));                              % normalization constant
+% formula according to Cloud Optics by Kokhanovsky
 %n_r = N0* N./r .* exp(-log(r./r_modal).^2 ./(2*sigma.^2));                            % gamma droplet distribution
+% -------------------------------------------------------------------------------------
+
+
+
+% -------------------------------------------------------------------------------------
+% formula according to LibRadTran user's guide page 130
+% in this case, r_modal cannot be less than 1
+% sigma is>0 and <1 ?
+% ***** I still don't understand this version well *****
+
+%N = 1/(-log(sigma) * sqrt(2*pi));                              % normalization constant
+%n_r = N0* N./r .* exp(-(1/2) * ((log(r) - log(r_modal))./log(sigma)).^2);                            % gamma droplet distribution
+% -------------------------------------------------------------------------------------
 
 
 end
