@@ -9,47 +9,89 @@ clear variables
 
 % Define the boundaries of the medium
 inputs.tau_lower_limit = 0;
-inputs.tau_upper_limit = 10;
+inputs.tau_upper_limit = 20;
 
 % Define the albedo of the bottom boundary (tau upper limit)
-inputs.albedo_maxTau = 0.05;
+inputs.albedo_maxTau = 0.03;
+
+% Layers can differ by radius, by material, or both. If the layers differ
+% by radius, create a vector describing each layer radius from top to
+% bottom (tau = 0 to tau = tau0). If the layers differ by index of
+% refraction, create a vector describing each layer indec of refraction
+% from top to bottom. If both are true, create a cell array for both the
+% changing radii and the changing index of refraction
+
+inputs.layerRadii = 10:-1:4;      % radius change between two layers
+
+% Define the number of layers within the medium that differ
+inputs.N_layers = length(inputs.layerRadii);
+
+% Define the layer boundaries given the number of layers and the boundaries
+% of the entire medium
+inputs.layerBoundaries = linspace(inputs.tau_lower_limit, inputs.tau_upper_limit, inputs.N_layers +1);
 
 % Define the number of photons to inject into the medium
 inputs.N_photons = 10000;
 
-% define the wavelength
-inputs.wavelength = 500;           % nanometers
-inputs.wavelength = 1950;          % nanometers
 
-% Define the size of the scatterer and its scattering properties
-% Assuming a pure homogenous medium composed of a single substance
-
-inputs.radius = 10;                     % microns
+%%  MIE CALCULATIONS
 
 % ------------------------------------------------------------------
 % Run Mie calculation to obtain single scatering albedo and asymmetry
 % parameter
 % ------------------------------------------------------------------
 
-inputs.mie.distribution = 'mono';           % droplet distribution
-inputs.mie.distribution_width = 0;
+% define the wavelength
+% The wavelength input is defined as follows:
+% [wavelength_start, wavelength_end, wavelength_step].
+inputs.mie.wavelength = [2125, 2125, 0];          % nanometers
+
+% The first entry belows describes the type of droplet distribution
+% that should be used. The second describes the distribution width. If
+% running a mono-dispersed calculation, no entry for distribution width is
+% required.
+inputs.mie.distribution = {'mono', []};           % droplet distribution
+
+% What mie code should we use to compute the scattering properties?
 inputs.mie.mie_program = 'MIEV0';               % type of mie algorithm to run
+
+% Do you want a long or short error file?
 inputs.mie.err_msg_str = 'verbose';
+
+% What is the index of refraction of the scatterer? If there is more than
+% one scatterer, enter multiple values for the index of refraction
 inputs.mie.indexOfRefraction = 'water';
 %inputs.mie.indexOfRefraction = 1.33 + 9.32e-5i;
 
+% Define the size of the scatterer and its scattering properties
+% Assuming a pure homogenous medium composed of a single substance.
+% The radius input is defined as [r_start, r_end, r_step].
+% where r_step is the interval between radii values (used only for 
+% vectors of radii). A 0 tells the code there is no step. Finally, the
+% radius values have to be in increasing order.
+if inputs.N_layers==1
+    inputs.mie.radius = [inputs.layerRadii, inputs.layerRadii, 0];    % microns
+else
+    inputs.mie.radius = [min(inputs.layerRadii), max(inputs.layerRadii),...
+                         abs(inputs.layerRadii(1) - inputs.layerRadii(2))];    % microns
+end
 
 
 
 % Create a mie file
-[input_filename, output_filename, mie_folder] = write_mie_file(inputs.mie.mie_program, inputs.mie.indexOfRefraction,inputs.radius,...
-    inputs.wavelength,inputs.mie.distribution, inputs.mie.distribution_width, inputs.mie.err_msg_str);
+[input_filename, output_filename, mie_folder] = write_mie_file(inputs.mie.mie_program, inputs.mie.indexOfRefraction,...
+    inputs.mie.radius,inputs.mie.wavelength,inputs.mie.distribution, inputs.mie.err_msg_str);
 
 % run the mie file
 runMIE(mie_folder,input_filename,output_filename);
 
 % Read the output of the mie file
 [ds,~,~] = readMIE(mie_folder,output_filename);
+
+% --------------------------------------------------
+% Outputs vary by wavelength along the row dimension
+% Outputs vary by radii along the column dimension
+% --------------------------------------------------
 
 % Define the single scattering albedo 
 inputs.ssa = ds.ssa;
@@ -60,7 +102,7 @@ inputs.g = ds.asymParam;
 
 %% Run 2 stream monte carlo code
 
-[F_norm, final_state, photon_tracking] = twoStream_monteCarlo(inputs);
+[F_norm, final_state, photon_tracking, inputs] = twoStream_monteCarlo(inputs);
 
 
 %% Compare the monte carlo solution with the analytical solution

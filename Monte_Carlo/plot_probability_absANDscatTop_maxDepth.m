@@ -1,5 +1,5 @@
 % Make a plot of either the probability or the PDF of the conditional
-% probability: If photon n is scatterd out the top, the probability 
+% probability: If photon n is scatterd out the top, the probability
 % of reaching a maximum depth tau is...
 
 % probability_str can either be
@@ -47,39 +47,81 @@ num_photons_absorbed = final_state.absorbed;
 
 % Make plot
 
-figure;
-plot(scatter_out_top_maxDepth_PDF,...
-    scatter_out_top_maxDepth_PDF_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_edges)/2)
-hold on
-plot(absorbed_maxDepth_PDF,...
-    absorbed_maxDepth_PDF_edges(1:end-1) + diff(absorbed_maxDepth_PDF_edges)/2)
-set(gca, 'YDir','reverse')
-grid on; grid minor
-xlabel('$P(\tau)$','Interpreter','latex');
-ylabel('$\tau$','Interpreter','latex')
-title({'Conditional Probability of photons reaching a max depth of $\tau$'},...
-    'Interpreter','latex')
-set(gcf, 'Position',[0 0 1000 630])
+if inputs.N_layers==1
 
-dim = [0.7 0.45 0 0];
+    figure;
+    plot(scatter_out_top_maxDepth_PDF,...
+        scatter_out_top_maxDepth_PDF_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_edges)/2)
+    hold on
+    plot(absorbed_maxDepth_PDF,...
+        absorbed_maxDepth_PDF_edges(1:end-1) + diff(absorbed_maxDepth_PDF_edges)/2)
+    set(gca, 'YDir','reverse')
+    grid on; grid minor
+    xlabel('$P(\tau)$','Interpreter','latex');
+    ylabel('$\tau$','Interpreter','latex')
+    title({'Conditional Probability of photons reaching a max depth of $\tau$'},...
+        'Interpreter','latex')
+    set(gcf, 'Position',[0 0 1000 630])
 
-texBox_str = {['$N_{photons}^{total} = $', num2str(inputs.N_photons)],...
-    ['$\lambda$ = ',num2str(inputs.wavelength), ' $nm$'],...
-    ['$\tilde{\omega}$ = ', num2str(inputs.ssa)], ...
-    ['$g$ = ', num2str(inputs.g)],...
-    ['$r$ = ', num2str(inputs.radius), ' $\mu m$'],...
-    ['$\tau_0$ = ', num2str(inputs.tau_upper_limit)],...
-    ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
-t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
-t.Color = 'white';
-t.FontSize = 25;
-t.FontWeight = 'bold';
-t.EdgeColor = 'white';
-t.FitBoxToText = 'on';
+    dim = [0.685 0.5 0 0];
 
-legend(['Scattered out top, ', num2str(num_photons_scatter_out_top),' photons'],...
-    ['Absorbed, ', num2str(num_photons_absorbed),' photons'],...
-    'Interpreter','latex','Location','best');
+    texBox_str = {['$N_{photons}^{total} = $', num2str(inputs.N_photons)],...
+        ['$\lambda$ = ',num2str(inputs.mie.wavelength(1)), ' $nm$'],...
+        ['$\tilde{\omega}$ = ', num2str(inputs.ssa)], ...
+        ['$g$ = ', num2str(inputs.g)],...
+        ['$r$ = ', num2str(inputs.radius), ' $\mu m$'],...
+        ['$\tau_0$ = ', num2str(inputs.tau_upper_limit)],...
+        ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
+    t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
+    t.Color = 'white';
+    t.FontSize = 25;
+    t.FontWeight = 'bold';
+    t.EdgeColor = 'white';
+    t.FitBoxToText = 'on';
+
+    legend(['Scattered out top, ', num2str(num_photons_scatter_out_top),' photons'],...
+        ['Absorbed, ', num2str(num_photons_absorbed),' photons'],...
+        'Interpreter','latex','Location','best');
+
+
+else
+
+    % There is more than one layer! For now lets leave out the ssa and
+    % asymmetry parameter values
+
+    figure;
+    plot(scatter_out_top_maxDepth_PDF,...
+        scatter_out_top_maxDepth_PDF_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_edges)/2)
+    hold on
+    plot(absorbed_maxDepth_PDF,...
+        absorbed_maxDepth_PDF_edges(1:end-1) + diff(absorbed_maxDepth_PDF_edges)/2)
+    set(gca, 'YDir','reverse')
+    grid on; grid minor
+    xlabel('$P(\tau)$','Interpreter','latex');
+    ylabel('$\tau$','Interpreter','latex')
+    title({'Conditional Probability of photons reaching a max depth of $\tau$'},...
+        'Interpreter','latex')
+    set(gcf, 'Position',[0 0 1000 630])
+
+    dim = [0.685 0.5 0 0];
+
+    texBox_str = {['$N_{photons}^{total} = $', num2str(inputs.N_photons)],...
+        ['N layers = ', num2str(inputs.N_layers)],...
+        ['$\lambda$ = ',num2str(inputs.mie.wavelength(1)), ' $nm$'],...
+        ['$r_{top}$ = ',num2str(inputs.layerRadii(1)), ' $\mu m$'],...
+        ['$r_{bot}$ = ',num2str(inputs.layerRadii(end)), ' $\mu m$'],...
+        ['$\tau_0$ = ', num2str(inputs.tau_upper_limit)],...
+        ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
+    t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
+    t.Color = 'white';
+    t.FontSize = 25;
+    t.FontWeight = 'bold';
+    t.EdgeColor = 'white';
+    t.FitBoxToText = 'on';
+
+    legend(['Scattered out top, ', num2str(num_photons_scatter_out_top),' photons'],...
+        ['Absorbed, ', num2str(num_photons_absorbed),' photons'],...
+        'Interpreter','latex','Location','best');
 
 
 end

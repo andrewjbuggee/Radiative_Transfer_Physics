@@ -1,7 +1,7 @@
 % 2-stream radiative transfer using Monte Carlo methods
 % by Andrew John Buggee
 
-function [F_norm, final_state, photon_tracking] = twoStream_monteCarlo(inputs)
+function [F_norm, final_state, photon_tracking, inputs] = twoStream_monteCarlo_test(inputs)
 
 % ---------------------------------------
 % ------- Unpack input structure --------
@@ -11,6 +11,22 @@ function [F_norm, final_state, photon_tracking] = twoStream_monteCarlo(inputs)
 tau_upper_limit = inputs.tau_upper_limit;
 tau_lower_limit = inputs.tau_lower_limit;
 
+% Define the number of layers within the medium that differ
+N_layers = inputs.N_layers;
+
+% Layers can differ by radius, by material, or both. If the layers differ
+% by radius, create a vector describing each layer radius from top to
+% bottom (tau = 0 to tau = tau0). If the layers differ by index of
+% refraction, create a vector describing each layer indec of refraction
+% from top to bottom. If both are true, create a cell array for both the
+% changing radii and the changing index of refraction
+
+layerRadii = inputs.layerRadii;      % radius change between two layers
+
+% Define the layer boundaries given the number of layers and the boundaries
+% of the entire medium
+layerBoundaries = inputs.layerBoundaries;
+
 % Define the albedo of the lower tau boundary
 albedo_maxTau = inputs.albedo_maxTau;
 
@@ -18,18 +34,40 @@ albedo_maxTau = inputs.albedo_maxTau;
 N_photons = inputs.N_photons;
 
 % define the wavelength
-wavelength = inputs.wavelength;           % nanometers
+if inputs.mie.wavelength(3)>0
+    wavelength = inputs.mie.wavelength(1):inputs.mie.wavelength(3):inputs.mie.wavelength(2);           % nanometers
+else
+    wavelength = inputs.mie.wavelength(1);           % nanometers
+end
+
 
 % Define the size of the scatterer and its scattering properties
 % Assuming a pure homogenous medium composed of a single substance
 % Define the single scattering albedo of the substance in question
-r = inputs.radius;                     % microns
+if inputs.mie.radius(3)>0
+    r = inputs.mie.radius(1):inputs.mie.radius(3):inputs.mie.radius(2);                     % microns
+else
+    r = inputs.mie.radius(1);
+end
 
-% define the asymmetry parameter
-g = inputs.g;
+% ------------------------------------------------------------------------
+% Organize the scattering properties in the layer order from top to bottom
+% ------------------------------------------------------------------------
+g = zeros(length(wavelength), length(r));
+ssa = zeros(length(wavelength), length(r));
+for LL = 1:N_layers
+    % define the asymmetry parameter
+    index = layerRadii(LL)==r;
+    g(:,LL) = inputs.g(:,index);
 
-% define the single scattering albedo
-ssa = inputs.ssa;
+    % define the single scattering albedo
+    ssa(:,LL) = inputs.ssa(:,index);
+
+end
+
+% Redefine the new order of g and ssa
+inputs.g = g;
+inputs.ssa = ssa;
 
 % -----------------------------------------------------------
 % *** Define the probability of travelling some depth tau ***
@@ -127,9 +165,10 @@ for nn = 1:N_photons
     % t=0
     depth_travelled{nn} = [0, tau_sample];
 
-    % -------------------------------------------------
-    % **** Has the photon breached any boundaries? ****
-    % -------------------------------------------------
+
+    % -----------------------------------------
+    % **** Has the photon left out medium? ****
+    % -----------------------------------------
 
     % There is a chance we draw a number that causes the photon to transmit
     % through without any scattering events!
@@ -173,6 +212,24 @@ for nn = 1:N_photons
             % t=0
             depth_travelled{nn}(end+1) = direction{nn}(end)*tau_sample + depth_travelled{nn}(end);
 
+            % ------------------------------------------------------
+            % ----- Check to see what layer is our photon in!! -----
+            % ------------------------------------------------------
+            if N_layers>1
+                I_lessThan = find(layerBoundaries<depth_travelled{nn}(end));
+                I_greaterThan = find(layerBoundaries>depth_travelled{nn}(end));
+
+                % set the index describing which layer the photon is in
+                index_layer = I_lessThan(end);
+
+            else
+
+                % the index layer is 1, since there is only 1
+                index_layer = 1;
+
+            end
+            % ------------------------------------------------------
+
 
         else
 
@@ -200,6 +257,23 @@ for nn = 1:N_photons
         % draw, or if it is scattered back into our medium due to the bottom
         % boundary, then we redraw a tau and continue its life.
 
+        % ------------------------------------------------------
+        % ----- Check to see what layer is our photon in!! -----
+        % ------------------------------------------------------
+        if N_layers>1
+            I_lessThan = find(layerBoundaries<depth_travelled{nn}(end));
+
+            % set the index describing which layer the photon is in
+            index_layer = I_lessThan(end);
+
+        else
+
+            % the index layer is 1, since there is only 1
+            index_layer = 1;
+
+        end
+        % ------------------------------------------------------
+
 
         % --------------------------------------------------------
         % ***---- Roll dice. Did photon scatter or absorb? ---****
@@ -212,7 +286,7 @@ for nn = 1:N_photons
 
         scat_or_abs = rand(1,1);
 
-        while scat_or_abs<=ssa
+        while scat_or_abs<=ssa(index_layer)
 
             % If this is true, our photon scattered! We need a way of keeping
             % track of the direction our photon is moving because we have
@@ -228,7 +302,7 @@ for nn = 1:N_photons
                 g_sample = rand(1,1);
                 % is this less than or equal to the probability of forward
                 % scattering?
-                if g_sample <= ((1+g)/2)
+                if g_sample <= ((1+g(index_layer))/2)
                     % the the photon scattered in the forward direction
                     direction{nn}(end+1) = direction{nn}(end);       % Continues along the same direction
 
@@ -246,7 +320,7 @@ for nn = 1:N_photons
                 g_sample = rand(1,1);
                 % is this less than or equal to the probability of forward
                 % scattering?
-                if g_sample <= ((1+g)/2)
+                if g_sample <= ((1+g(index_layer))/2)
                     % the the photon scattered in the forward direction
                     direction{nn}(end+1) = direction{nn}(end);       % Continues along the same direction
 
@@ -270,6 +344,9 @@ for nn = 1:N_photons
 
             % record where the photon is
             depth_travelled{nn}(end+1) = direction{nn}(end)*tau_sample + depth_travelled{nn}(end);
+
+
+
 
             % -------------------------------------------------
             % **** Has the photon breached any boundaries? ****
@@ -330,6 +407,23 @@ for nn = 1:N_photons
                     depth_travelled{nn}(end+1) = direction{nn}(end)*tau_sample + depth_travelled{nn}(end);
 
 
+                    % ------------------------------------------------------
+                    % ----- Check to see what layer is our photon in!! -----
+                    % ------------------------------------------------------
+                    if N_layers>1
+                        I_lessThan = find(layerBoundaries<depth_travelled{nn}(end));
+
+                        % set the index describing which layer the photon is in
+                        index_layer = I_lessThan(end);
+
+                    else
+
+                        % the index layer is 1, since there is only 1
+                        index_layer = 1;
+
+                    end
+                    % ------------------------------------------------------
+
                 else
 
                     % Our photon was absorbed by the lower boundary
@@ -355,6 +449,24 @@ for nn = 1:N_photons
             end
 
 
+            % ------------------------------------------------------
+            % ----- Check to see what layer is our photon in!! -----
+            % ------------------------------------------------------
+            if N_layers>1
+                I_lessThan = find(layerBoundaries<depth_travelled{nn}(end));
+
+                % set the index describing which layer the photon is in
+                index_layer = I_lessThan(end);
+
+            else
+
+                % the index layer is 1, since there is only 1
+                index_layer = 1;
+
+            end
+            % ------------------------------------------------------
+
+
             % draw a new random number! Did our photon scatter or absorb?
             scat_or_abs = rand(1,1);
 
@@ -371,7 +483,7 @@ for nn = 1:N_photons
     % --------------------------------------------------
     % If the photon ended in absorption, record it!
 
-    if scat_or_abs>ssa && depth_travelled{nn}(end)>tau_lower_limit && depth_travelled{nn}(end)<tau_upper_limit
+    if scat_or_abs>ssa(index_layer) && depth_travelled{nn}(end)>tau_lower_limit && depth_travelled{nn}(end)<tau_upper_limit
 
         % Make sure all three conditions are met!
         % The random number, scat_or_abs is greater than the ssa
