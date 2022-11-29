@@ -9,10 +9,10 @@ clear variables
 
 % Define the boundaries of the medium
 inputs.tau_lower_limit = 0;
-inputs.tau_upper_limit = 20;
+inputs.tau_upper_limit = 5;
 
 % Define the albedo of the bottom boundary (tau upper limit)
-inputs.albedo_maxTau = 0.03;
+inputs.albedo_maxTau = 0.1;
 
 % Layers can differ by radius, by material, or both. If the layers differ
 % by radius, create a vector describing each layer radius from top to
@@ -21,7 +21,7 @@ inputs.albedo_maxTau = 0.03;
 % from top to bottom. If both are true, create a cell array for both the
 % changing radii and the changing index of refraction
 
-inputs.layerRadii = 10:-1:4;      % radius change between two layers
+inputs.layerRadii = 10;      % radius of spheres in each layer
 
 % Define the number of layers within the medium that differ
 inputs.N_layers = length(inputs.layerRadii);
@@ -31,7 +31,7 @@ inputs.N_layers = length(inputs.layerRadii);
 inputs.layerBoundaries = linspace(inputs.tau_lower_limit, inputs.tau_upper_limit, inputs.N_layers +1);
 
 % Define the number of photons to inject into the medium
-inputs.N_photons = 10000;
+inputs.N_photons = 1000;
 
 
 %%  MIE CALCULATIONS
@@ -100,7 +100,7 @@ inputs.ssa = ds.ssa;
 inputs.g = ds.asymParam;
 
 
-%% Run 2 stream monte carlo code
+%% Run 2 stream 1D monte carlo code
 
 [F_norm, final_state, photon_tracking, inputs] = twoStream_monteCarlo(inputs);
 
