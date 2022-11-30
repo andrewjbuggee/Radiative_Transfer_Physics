@@ -57,7 +57,7 @@ g = zeros(length(wavelength), length(r));
 ssa = zeros(length(wavelength), length(r));
 for LL = 1:N_layers
     % define the asymmetry parameter
-    index = layerRadii(LL)==r;
+    [~,index] = min(abs(r-layerRadii(LL)));
     g(:,LL) = inputs.g(:,index);
 
     % define the single scattering albedo
@@ -669,6 +669,8 @@ N_counts_moving_down = zeros(1, N_bins);
 % assign each x to one of our bins
 for nn=1:N_photons
 
+    
+
     % Compute whether or not the photon was moving in the positive y
     % direction or the negative y direction. A value of 1 tells the code
     % that the photon was increasing in tau along the y axis, and a value
@@ -698,8 +700,8 @@ for nn=1:N_photons
 
             % If the photon is moving down, then when it cross bin-edge 3,
             % its in bucket 3.
-            bins_photon_moves_through = binEdges>=photon_tau_position{nn}(tt) & ...
-                binEdges<photon_tau_position{nn}(tt+1);
+            bins_photon_moves_through = binEdges>=photon_tau_position{nn}(tt,2) & ...
+                binEdges<photon_tau_position{nn}(tt+1,2);
 
             N_counts_moving_down(bins_photon_moves_through) = N_counts_moving_down(bins_photon_moves_through) +1;
 
@@ -710,8 +712,8 @@ for nn=1:N_photons
         elseif y_direction(tt+1)==1 && y_direction(tt)==-1
             % If the photon is moving down, then when it cross bin-edge 3,
             % its in bucket 3.
-            bins_photon_moves_through = binEdges>=photon_tau_position{nn}(tt) & ...
-                binEdges<photon_tau_position{nn}(tt+1);
+            bins_photon_moves_through = binEdges>=photon_tau_position{nn}(tt,2) & ...
+                binEdges<photon_tau_position{nn}(tt+1,2);
 
             % Just make sure the first bin is not 1! We can't have a 0
             % index in matlab
@@ -736,8 +738,8 @@ for nn=1:N_photons
 
             % If the photon is continuing up then we only have to count
             % the bins it passes through
-            bins_photon_moves_through = binEdges<=photon_tau_position{nn}(tt) & ...
-                binEdges>=photon_tau_position{nn}(tt+1);
+            bins_photon_moves_through = binEdges<=photon_tau_position{nn}(tt,2) & ...
+                binEdges>=photon_tau_position{nn}(tt+1,2);
 
             bins_photon_moves_through = find(bins_photon_moves_through)-1;
 
@@ -761,8 +763,8 @@ for nn=1:N_photons
             % If the photon switched direction, we have to account for
             % the final bin it ends up in
 
-            bins_photon_moves_through = binEdges<=photon_tau_position{nn}(tt) & ...
-                binEdges>=photon_tau_position{nn}(tt+1);
+            bins_photon_moves_through = binEdges<=photon_tau_position{nn}(tt,2) & ...
+                binEdges>=photon_tau_position{nn}(tt+1,2);
 
             % Just make sure the first bin is not 1! We can't have a 0
             % index in matlab
@@ -775,7 +777,7 @@ for nn=1:N_photons
             % logical true value for the binEdge equal to tau_upper_limit.
             % If we don't we get an error, and all we need to keep track of
             % is whether or not the photon passed through this bin
-            if bins_photon_moves_through(end)==true && (photon_tau_position{nn}(tt)==tau_y_upper_limit || photon_tau_position{nn}(tt+1)==tau_y_upper_limit)
+            if bins_photon_moves_through(end)==true && (photon_tau_position{nn}(tt,2)==tau_y_upper_limit || photon_tau_position{nn}(tt+1,2)==tau_y_upper_limit)
                 bins_photon_moves_through(end) = 0;
             end
 

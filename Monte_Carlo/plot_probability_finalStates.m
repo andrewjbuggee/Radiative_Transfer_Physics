@@ -1,7 +1,7 @@
 % Plot a bar chart showing the proportions of photons ending in each final
 % state
 
-function [] = plot_probability_finalStates(final_state,inputs)
+function [] = plot_probability_finalStates_1D_monteCarlo(final_state,inputs)
 
 
 if inputs.N_layers==1
@@ -27,18 +27,18 @@ if inputs.N_layers==1
 
 
     dim = [0.7 0.85 0 0];
-    texBox_str = {['$N_{photons}^{total} = $', num2str(inputs.N_photons)],...
+    texBox_str = {['$N_{photons}^{total} = 10^{', num2str(log10(inputs.N_photons)),'}$'],...
         ['$\lambda$ = ',num2str(inputs.mie.wavelength(1)), ' $nm$'],...
         ['$\tilde{\omega}$ = ', num2str(inputs.ssa)], ...
         ['$g$ = ', num2str(inputs.g)],...
-        ['$r$ = ', num2str(inputs.radius), ' $\mu m$'],...
-        ['$\tau_0$ = ', num2str(inputs.tau_upper_limit)],...
+        ['$r$ = ', num2str(inputs.layerRadii), ' $\mu m$'],...
+        ['$\tau_0$ = ', num2str(inputs.tau_y_upper_limit)],...
         ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
     t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
-    t.Color = 'white';
+    t.Color = 'black';
     t.FontSize = 25;
     t.FontWeight = 'bold';
-    t.EdgeColor = 'white';
+    t.EdgeColor = 'black';
     t.FitBoxToText = 'on';
 
 
@@ -66,7 +66,7 @@ else
 
 
     dim = [0.7 0.85 0 0];
-    texBox_str = {['$N_{photons}^{total} = $', num2str(inputs.N_photons)],...
+    texBox_str = {['$N_{photons}^{total} = 10^{', num2str(log10(inputs.N_photons)),'}$'],...
         ['N layers = ', num2str(inputs.N_layers)],...
         ['$\lambda$ = ',num2str(inputs.mie.wavelength(1)), ' $nm$'],...
         ['$r_{top}$ = ',num2str(inputs.layerRadii(1)), ' $\mu m$'],...
@@ -74,10 +74,10 @@ else
         ['$\tau_0$ = ', num2str(inputs.tau_upper_limit)],...
         ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
     t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
-    t.Color = 'white';
+    t.Color = 'black';
     t.FontSize = 25;
     t.FontWeight = 'bold';
-    t.EdgeColor = 'white';
+    t.EdgeColor = 'black';
     t.FitBoxToText = 'on';
 
 
