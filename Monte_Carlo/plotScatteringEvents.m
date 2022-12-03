@@ -4,6 +4,23 @@
 function plotScatteringEvents(photon_tau_position, tau_y_upperLimit)
 
 figure;
+xline(0,'LineWidth',0.5,'Color','black')
+hold on;
+yline(0,'LineWidth',1.5,'Color','black')
+hold on
+yline(tau_y_upperLimit,'LineWidth',1.5,'Color','black')
+hold on;
+grid on; grid minor
+
+ylim([-1,tau_y_upperLimit+1])
+xlim([min(photon_tau_position(:,1))-1,max(photon_tau_position(:,1))+1])
+title('Photon position','Interpreter','latex')
+xlabel('$\tau_x$','Interpreter','latex')
+ylabel('$\tau_y$','Interpreter','latex')
+
+set(gca,'YDir','reverse')
+
+drawnow
 
 for nn = 1:size(photon_tau_position,1)-1
 
@@ -12,7 +29,7 @@ for nn = 1:size(photon_tau_position,1)-1
         [photon_tau_position(nn,2), photon_tau_position(nn+1,2)])
     hold on
     drawnow
-    pause(0.5)
+    pause(0.25)
 
 
 
@@ -20,17 +37,9 @@ for nn = 1:size(photon_tau_position,1)-1
 end
 
 
-xline(0,'LineWidth',0.5,'Color','black')
-yline(0,'LineWidth',1.5,'Color','black')
-ylim([-1,tau_y_upperLimit+1])
-yline(tau_y_upperLimit,'LineWidth',1.5,'Color','black')
 
-% xlim([-3,3])
-grid on; grid minor
 
-title('Photon position','Interpreter','latex')
-xlabel('$\tau_x$','Interpreter','latex')
-ylabel('$\tau_y$','Interpreter','latex')
+
 
 
 end

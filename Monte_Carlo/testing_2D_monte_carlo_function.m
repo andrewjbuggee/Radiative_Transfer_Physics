@@ -9,7 +9,12 @@ clear variables
 
 % Define the boundaries of the medium
 inputs.tau_y_lower_limit = 0;
-inputs.tau_y_upper_limit = 10;
+inputs.tau_y_upper_limit = 2;
+
+% define the solar zenith angle
+% This is the angle of the incident radiation with respect to the medium
+% normal direction
+inputs.solar_zenith_angle = 0;                  % deg from zenith
 
 % Define the albedo of the bottom boundary (tau upper limit)
 inputs.albedo_maxTau = 0;
@@ -22,7 +27,10 @@ inputs.albedo_maxTau = 0;
 % from top to bottom. If both are true, create a cell array for both the
 % changing radii and the changing index of refraction
 
-inputs.layerRadii = linspace(10,5,10);      % radius of spheres in each layer
+inputs.layerRadii = 10;      % radius of spheres in each layer
+
+% There HAS to be even spacing for the mie calcualtion to take place!
+
 
 % Define the number of layers within the medium that differ
 inputs.N_layers = length(inputs.layerRadii);
@@ -33,7 +41,7 @@ inputs.layerBoundaries = linspace(inputs.tau_y_lower_limit, inputs.tau_y_upper_l
 
 
 % Define the number of photons to inject into the medium
-inputs.N_photons = 1e4;
+inputs.N_photons = 1e5;
 
 %% MIE CALCULATIONS
 
@@ -45,7 +53,7 @@ inputs.N_photons = 1e4;
 % define the wavelength
 % The wavelength input is defined as follows:
 % [wavelength_start, wavelength_end, wavelength_step].
-inputs.mie.wavelength = [2200, 2200, 0];          % nanometers
+inputs.mie.wavelength = [550, 550, 0];          % nanometers
 
 % The first entry belows describes the type of droplet distribution
 % that should be used. The second describes the distribution width. If
@@ -67,7 +75,7 @@ inputs.mie.indexOfRefraction = 'water';
 % Define the size of the scatterer and its scattering properties
 % Assuming a pure homogenous medium composed of a single substance.
 % The radius input is defined as [r_start, r_end, r_step].
-% where r_step is the interval between radii values (used only for 
+% where r_step is the interval between radii values (used only for
 % vectors of radii). A 0 tells the code there is no step. Finally, the
 % radius values have to be in increasing order.
 if inputs.N_layers==1
@@ -75,14 +83,15 @@ if inputs.N_layers==1
 else
     % define the min, max, and step. Record the vector because these are
     % the exact values used in the mie calculations
-    
+
+    % Define the radius vector for our mie calculation
+    inputs.mie.radiusVector = sort(inputs.layerRadii);
     % min value
     inputs.mie.radius(1) = min(inputs.layerRadii);
     % max value
     inputs.mie.radius(2) = max(inputs.layerRadii);
     % step value
-    inputs.mie.radius(3) = abs(inputs.layerRadii(1) - inputs.layerRadii(2));    % microns
-
+    inputs.mie.radius(3) = inputs.mie.radiusVector(2) - inputs.mie.radiusVector(1);    % microns
 
 end
 
@@ -103,25 +112,93 @@ end
 % Outputs vary by radii along the column dimension
 % --------------------------------------------------
 
-% Define the single scattering albedo 
-inputs.ssa = ds.ssa;
+% ------------------------------------------------------------
+% Organize the scattering properties from medium top to bottom
+% Use the definition of the each layer's radii
+% This vector is define from layer top to layer bottom
+% ------------------------------------------------------------
+if inputs.N_layers>1
+inputs.g = zeros(1, length(inputs.layerRadii));
+inputs.ssa = zeros(1, length(inputs.layerRadii));
+inputs.Qe = zeros(1, length(inputs.layerRadii));
+for LL = 1:inputs.N_layers
 
-% Define the asymmetry parameter
-inputs.g = ds.asymParam;
+    % define the asymmetry parameter
+    [~,index] = min(abs((inputs.mie.radius(1):inputs.mie.radius(3):inputs.mie.radius(2))-inputs.layerRadii(LL)));
+    inputs.g(:,LL) = ds.asymParam(:,index);
+
+    % define the single scattering albedo
+    inputs.ssa(:,LL) = ds.ssa(:,index);
+
+    % define the extinction efficiency
+    inputs.Qe(:,LL) = ds.Qext(:,index);
+
+end
+
+else
+    inputs.g = ds.asymParam;
+
+    % define the single scattering albedo
+    inputs.ssa = ds.ssa;
+
+    % define the extinction efficiency
+    inputs.Qe = ds.Qext;
+end
+
 
 % We don't need the rest of the mie computations, so lets delete them
 clear ds
 
 
 
-%% Run 2 stream 2D monte carlo code
 
+%% Do you want to integrate over a size distribution?
+
+% --------------------------------------------------
+inputs.mie.integrate_over_size_distribution = false;
+% --------------------------------------------------
+
+
+
+if inputs.mie.integrate_over_size_distribution==true
+
+    % Define the type of size distribution
+    size_dist = 'gamma';
+
+    % Define the distribution variance, depending on the distribution type used
+    % Has to be the same length as the numer of layers in our medium
+    dist_var = linspace(7,7,length(inputs.ssa));           % Typically value for liquid water clouds
+
+    % Compute the average value for the single scattering albedo over a size
+    % distribution
+    [inputs.ssa_avg, inputs.Qe_avg, inputs.g_avg] = average_mie_over_size_distribution(inputs.ssa, inputs.g, inputs.Qe,...
+        inputs.layerRadii,dist_var, inputs.mie.wavelength(1), inputs.mie.indexOfRefraction, size_dist);
+
+
+end
+
+
+%% Run 2 stream 2D monte carlo code
+tic
 [F_norm, final_state, photon_tracking, inputs] = twoStream_2D_monteCarlo(inputs);
+toc
 
 
 %% Compare the monte carlo solution with the analytical solution
 
 plot_2strm_2D_monteCarlo(inputs,F_norm);
+
+
+%% Do you want to save you results?
+
+% save in the following folder
+inputs.folder_name_2save = 'Monte_Carlo_Simulation_Results';
+cd(inputs.folder_name_2save)
+save(['2D_MC_',char(datetime('today')),'_Wavelength_',num2str(inputs.mie.wavelength(1)),...
+    '_N-Photons_',num2str(inputs.N_photons),'_N-Layers_',num2str(inputs.N_layers),...
+    '_Tau0_',num2str(inputs.tau_y_upper_limit),'_SZA_',num2str(inputs.solar_zenith_angle),'.mat'],...
+    "inputs","F_norm", "final_state", "photon_tracking");
+cd ..
 
 
 %% Lets plot the max depth reached by each photon normalized by the total number of photons
@@ -144,10 +221,10 @@ plot_2strm_2D_monteCarlo(inputs,F_norm);
 % scattered out the cloud top, and plot the probability of a photon being
 % absorbed at a depth tau given that it was absorbed.
 
-plot_probability_absANDscatTop_maxDepth(inputs, final_state, photon_tracking, 'probability')
+plot_probability_absANDscatTop_maxDepth(inputs, final_state, photon_tracking, 'pdf')
 
 
 %% Plot a bar chart showing the probability of each final state
 
 plot_probability_finalStates(final_state,inputs)
- 
+

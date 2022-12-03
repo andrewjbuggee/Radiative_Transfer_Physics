@@ -11,6 +11,9 @@ function [F_norm, final_state, photon_tracking, inputs] = twoStream_2D_monteCarl
 tau_y_upper_limit = inputs.tau_y_upper_limit;
 tau_y_lower_limit = inputs.tau_y_lower_limit;
 
+% Define the solar zenith angle
+solar_zenith_angle = inputs.solar_zenith_angle;
+
 % Define the number of layers within the medium that differ
 N_layers = inputs.N_layers;
 
@@ -20,8 +23,6 @@ N_layers = inputs.N_layers;
 % refraction, create a vector describing each layer indec of refraction
 % from top to bottom. If both are true, create a cell array for both the
 % changing radii and the changing index of refraction
-
-layerRadii = inputs.layerRadii;      % radius change between two layers
 
 % Define the layer boundaries given the number of layers and the boundaries
 % of the entire medium
@@ -33,41 +34,34 @@ albedo_maxTau = inputs.albedo_maxTau;
 % Define the number of photons to inject into the medium
 N_photons = inputs.N_photons;
 
-% define the wavelength
-if inputs.mie.wavelength(3)>0
-    wavelength = inputs.mie.wavelength(1):inputs.mie.wavelength(3):inputs.mie.wavelength(2);           % nanometers
-else
-    wavelength = inputs.mie.wavelength(1);           % nanometers
-end
+% unpack the mie scattering properties!
 
-
-% Define the size of the scatterer and its scattering properties
-% Assuming a pure homogenous medium composed of a single substance
-% Define the single scattering albedo of the substance in question
-if inputs.mie.radius(3)>0
-    r = inputs.mie.radius(1):inputs.mie.radius(3):inputs.mie.radius(2);                     % microns
-else
-    r = inputs.mie.radius(1);
-end
-
-% ------------------------------------------------------------------------
-% Organize the scattering properties in the layer order from top to bottom
-% ------------------------------------------------------------------------
-g = zeros(length(wavelength), length(r));
-ssa = zeros(length(wavelength), length(r));
-for LL = 1:N_layers
+% asymmetry parameter for each layer
+if inputs.mie.integrate_over_size_distribution==false
+    
+    % then we use the values directly computed by the mie program
+    
     % define the asymmetry parameter
-    [~,index] = min(abs(r-layerRadii(LL)));
-    g(:,LL) = inputs.g(:,index);
+    g = inputs.g;
 
     % define the single scattering albedo
-    ssa(:,LL) = inputs.ssa(:,index);
+    ssa = inputs.ssa;
+
+else
+
+    % then we use the values that have been integrated over some size
+    % distribution
+
+    % define the average asymmetry parameter
+    g = inputs.g_avg;
+
+    % define the average single scattering albedo
+    ssa = inputs.ssa_avg;
 
 end
 
-% Redefine the new order of g and ssa
-inputs.g = g;
-inputs.ssa = ssa;
+
+
 
 % -----------------------------------------------------------
 % *** Define the probability of travelling some depth tau ***
@@ -105,6 +99,8 @@ mu = @(g, x) 1/(2*g) * (1 + g^2 - ((1 - g^2)./(1 - g + 2*g*x)).^2);
 % *** Define the clockwise and counter-clockwise rotation transformation matrix in 2D ***
 % ---------------------------------------------------------------------------------------
 
+% There are from the perspective of the most recent tau vector
+
 % clockwise rotation
 M_clockwise = @(Mu) [Mu, sqrt(1 - Mu^2);...
                     -sqrt(1 - Mu^2), Mu];
@@ -119,12 +115,13 @@ M_counterClockwise = @(Mu) [Mu, -sqrt(1 - Mu^2);...
 % ---------------------------------------------------------------------------------------------
 % *** Define the function that computes the x and y components in the new coordinate system ***
 % ---------------------------------------------------------------------------------------------
-XandY = @(L,Mu) L.*[rand_plusORminus_one(1,1)*sqrt(1 - Mu^2), Mu];
+XandY = @(tau,Mu) tau.*[rand_plusORminus_one(1,1)*sqrt(1 - Mu^2), Mu];
 
 
 
 % reset the random number generator
 rng('default');
+
 
 % -------------------------------------------------------------
 % *** Create a bunch of empty arrays to keep track of stuff ***
@@ -168,7 +165,7 @@ absorbed_index = 0;
 
 
 
-for nn = 1:N_photons
+parfor nn = 1:N_photons
 
 
 
@@ -190,11 +187,9 @@ for nn = 1:N_photons
     M_transformation = eye(2);
     
     % We need to keep track of the current mu sample and the previous one. The
-    % new coordinate system depends on the current mu and the previous mu. We
-    % want the first mu to be 1 because the photon as it enters the medium can
-    % be defined as scattered in the forward direction.
-    mu_vector = 1;
-
+    % new coordinate system depends on the current mu and the previous mu. 
+    mu_vector = cosd(solar_zenith_angle);
+    %mu_vector = 0;   
 
 
 
@@ -216,8 +211,9 @@ for nn = 1:N_photons
     % only need to keep track of the current and previous position. The
     % first column is the x position in tau space, the second column is the
     % y position in tau space.
-    photon_position_in_new_coordniates = [0, tau_sample];
-
+    photon_position_in_new_coordniates = XandY(tau_sample, mu_vector(end));
+    %photon_position_in_new_coordniates = [0, tau_sample];
+    
     % we need to keep track of where the photon is within our medium
     % Start by giving each vector a 0 to show the starting point at time
     % t=0. The first column is the x position in tau space. The second
@@ -227,7 +223,7 @@ for nn = 1:N_photons
 
 
     % -----------------------------------------
-    % **** Has the photon left out medium? ****
+    % **** Has the photon left our medium? ****
     % -----------------------------------------
 
     % There is a chance we draw a number that causes the photon to transmit
@@ -249,12 +245,33 @@ for nn = 1:N_photons
         scat_or_abs = rand(1,1);
 
         if scat_or_abs<=albedo_maxTau
+            % ----------------------------------------------
             % The photon is scattered back into our medium!!
+            % ----------------------------------------------
 
             % First, set the distance travelled to be the boundary
             % condition value, since we are treating this as a hard
             % boundary
             photon_tau_position{nn}(end,2) = tau_y_upper_limit;
+
+            % ------------------------------------------------------
+            % ----- Check to see what layer is our photon in!! -----
+            % ------------------------------------------------------
+            if N_layers>1
+                I_lessThan = find(layerBoundaries<photon_tau_position{nn}(end,2));
+
+                % set the index describing which layer the photon is in
+                index_layer = I_lessThan(end);
+
+            else
+
+                % the index layer is 1, since there is only 1
+                index_layer = 1;
+
+            end
+            % ------------------------------------------------------
+
+
 
             % ---------------------------------------------------------
             % *** Determine which direction the photon scattered in ***
@@ -407,7 +424,7 @@ for nn = 1:N_photons
             % travels
             tau_sample = tau(rand(1,1));
 
-            photon_position_in_new_coordniates(end+1,:) = XandY(tau_sample, mu_vector(end)); %#ok<AGROW> 
+            photon_position_in_new_coordniates(end+1,:) = XandY(tau_sample, mu_vector(end)); 
 
 
             % ---------------------------------------------------------------------------------
@@ -600,10 +617,9 @@ for nn = 1:N_photons
     % --------------------------------------------------
     % If the photon ended in absorption, record it!
 
-    if scatter_out_bottom_index(end)~=nn && scatter_out_top_index(end)~=nn &&...
-            photon_tau_position{nn}(end,2)>tau_y_lower_limit && photon_tau_position{nn}(end,2)<tau_y_upper_limit
+    if photon_tau_position{nn}(end,2)>tau_y_lower_limit && photon_tau_position{nn}(end,2)<tau_y_upper_limit
 
-        % Make sure all four conditions are met!
+        % Make sure both conditions are met!
         % The random number, scat_or_abs is greater than the ssa
         % the photon is still within the boundaries of our defined medium
 
@@ -644,7 +660,7 @@ end
 
 % Set up the tau grid first
 
-N_bins = 100;
+N_bins = 500;
 
 if tau_y_upper_limit==inf
     binEdges = logspace(-3, ceil(log10(max(max_depth))),N_bins+1);
@@ -683,8 +699,10 @@ for nn=1:N_photons
     for tt = 1:size(photon_tau_position{nn},1)-1
 
         % Check to see if the photon is moving down or up and check to see
-        % if its continuing along the same direction, or it it's switched
+        % if its continuing along the same direction, or if it's switched
         % directions
+        
+        %[nn,tt]
 
         % ----------------------------------------
         % **** Photon continuing to move down ****
@@ -710,16 +728,22 @@ for nn=1:N_photons
             % **** Photon moving down after moving up ****
             % --------------------------------------------
         elseif y_direction(tt+1)==1 && y_direction(tt)==-1
-            % If the photon is moving down, then when it cross bin-edge 3,
-            % its in bucket 3.
-            bins_photon_moves_through = binEdges>=photon_tau_position{nn}(tt,2) & ...
-                binEdges<photon_tau_position{nn}(tt+1,2);
+            % In this case the photon has turned around in the bin it was
+            % left off in. Therefore we have to count this as a photon
+            % moving down in this bin.
+            
+            % Photon is moving down, so the starting bin will be smaller
+            % than, or equal to, the final bin
+            bin_edges_less_than_start_position = find(binEdges<=photon_tau_position{nn}(tt,2));
+            
+            % This bin should be greater than, or equal to, the starting
+            % bin
+            bin_edges_less_than_end_position = find(binEdges<photon_tau_position{nn}(tt+1,2));
 
-            % Just make sure the first bin is not 1! We can't have a 0
-            % index in matlab
-            if find(bins_photon_moves_through,1)~=1
-                bins_photon_moves_through(find(bins_photon_moves_through,1)-1) = 1;
-            end
+            bins_photon_moves_through = zeros(1,N_bins+1);
+            bins_photon_moves_through(bin_edges_less_than_start_position(end):bin_edges_less_than_end_position(end)) = 1;
+            bins_photon_moves_through = logical(bins_photon_moves_through);
+            
 
             N_counts_moving_down(bins_photon_moves_through) = N_counts_moving_down(bins_photon_moves_through) +1;
 
@@ -738,16 +762,38 @@ for nn=1:N_photons
 
             % If the photon is continuing up then we only have to count
             % the bins it passes through
-            bins_photon_moves_through = binEdges<=photon_tau_position{nn}(tt,2) & ...
-                binEdges>=photon_tau_position{nn}(tt+1,2);
+            
+            % Photon is moving up, so the starting bin will be larger
+            % than, or equal to, the final bin
+            bin_edges_less_than_start_position = find(binEdges<=photon_tau_position{nn}(tt,2));
+            
+            % This bin should be less than, or equal to, the starting
+            % bin
+            bin_edges_less_than_end_position = find(binEdges<=photon_tau_position{nn}(tt+1,2));
 
-            bins_photon_moves_through = find(bins_photon_moves_through)-1;
+            bins_photon_moves_through = zeros(1,N_bins+1);
 
+            % let's check to see if the photon is still in the same bin. If
+            % it is, we've already accounted for it's upward motion, so we
+            % don't want to double count this. 
+            if bin_edges_less_than_end_position(end)==bin_edges_less_than_start_position(end)
+                % If this is true, the photon is continuing to move upward
+                % in the same bin, and we don't count it
+            else
 
-            % Just make sure the first bin is not 1! We can't have a 0
-            % index in matlab
-            bins_photon_moves_through(bins_photon_moves_through<1)=[];
+                % If the photon is continuing to move upwards, that means
+                % the previous loop already accounted for the bin it's
+                % currently in, either because the photon turned around and
+                % ended up in the current bin, or because the photon
+                % continued to move upwards into the current bin. The logic
+                % above will count the bin its currently in, so we need to
+                % remove this value. We do this by subtracting 1 from the
+                % star position.
+                bins_photon_moves_through(bin_edges_less_than_end_position(end):bin_edges_less_than_start_position(end-1)) = 1;           
 
+            end
+
+            bins_photon_moves_through = logical(bins_photon_moves_through);
 
             N_counts_moving_up(bins_photon_moves_through) = N_counts_moving_up(bins_photon_moves_through) +1;
 
@@ -759,20 +805,23 @@ for nn=1:N_photons
             % --------------------------------------------
         elseif y_direction(tt+1)==-1 && y_direction(tt)==1
 
-
             % If the photon switched direction, we have to account for
             % the final bin it ends up in
 
-            bins_photon_moves_through = binEdges<=photon_tau_position{nn}(tt,2) & ...
-                binEdges>=photon_tau_position{nn}(tt+1,2);
+            % Photon is moving up, so the starting bin will be larger
+            % than, or equal to, the final bin
+            bin_edges_less_than_start_position = find(binEdges<=photon_tau_position{nn}(tt,2));
 
-            % Just make sure the first bin is not 1! We can't have a 0
-            % index in matlab
-            if find(bins_photon_moves_through,1)~=1
-                bins_photon_moves_through(find(bins_photon_moves_through,1)-1) = 1;
-            end
+            % The final bin will be smaller than, or equal to, to starting
+            % bin
+            bin_edges_less_than_end_position = find(binEdges<=photon_tau_position{nn}(tt+1,2));
 
-            % Some photons in the category will reflect off the bottom
+            bins_photon_moves_through = zeros(1,N_bins+1);
+            bins_photon_moves_through(bin_edges_less_than_end_position(end):bin_edges_less_than_start_position(end)) = 1;
+            bins_photon_moves_through = logical(bins_photon_moves_through);
+            
+
+            % Some photons in this category will reflect off the bottom
             % boudnary. If this happened, we simply need to remove the
             % logical true value for the binEdge equal to tau_upper_limit.
             % If we don't we get an error, and all we need to keep track of
@@ -780,6 +829,8 @@ for nn=1:N_photons
             if bins_photon_moves_through(end)==true && (photon_tau_position{nn}(tt,2)==tau_y_upper_limit || photon_tau_position{nn}(tt+1,2)==tau_y_upper_limit)
                 bins_photon_moves_through(end) = 0;
             end
+
+
 
 
             N_counts_moving_up(bins_photon_moves_through) = N_counts_moving_up(bins_photon_moves_through) +1;

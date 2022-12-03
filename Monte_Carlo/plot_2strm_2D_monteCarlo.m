@@ -1,21 +1,26 @@
-% Plot and compare the two stream monte carlo solutions to the analytical
-% solution defined in Bohren and Clothiaux
+% Plot the upwards and downwards irradiance from the 2D monte carlo
+% simulation
 
 % By Andrew John Buggee
 
 %%
 
-function [] = plot_2strm_monteCarlo_with_analytical(inputs,F_norm)
+function [] = plot_2strm_2D_monteCarlo(inputs,F_norm)
 
 % -------------------------
 % ***** Unpack Inputs *****
 % -------------------------
 
-ssa = inputs.ssa;
-g = inputs.g;
+if inputs.mie.integrate_over_size_distribution==true
+    ssa = inputs.ssa_avg;
+    g = inputs.g_avg;
+else
+    ssa = inputs.ssa;
+    g = inputs.g;
+end
 
-tau_lower_limit = inputs.tau_lower_limit;
-tau_upper_limit = inputs.tau_upper_limit;
+tau_y_lower_limit = inputs.tau_y_lower_limit;
+tau_y_upper_limit = inputs.tau_y_upper_limit;
 
 % Define the albedo of the lower boundary in our model
 albedo_maxTau = inputs.albedo_maxTau;
@@ -46,7 +51,7 @@ if inputs.N_layers==1
         % Next, check to see if our layer is infinitely thick, or has a finite
         % thickness
 
-        if tau_upper_limit == inf
+        if tau_y_upper_limit == inf
 
             K = sqrt((1 - ssa)*(1 - g*ssa));
             R_inf = (sqrt(1-ssa*g) - sqrt(1 - ssa))/(sqrt(1-ssa*g) + sqrt(1 - ssa));
@@ -80,19 +85,19 @@ if inputs.N_layers==1
             texBox_str = ['$R_{\infty} = \frac{\sqrt{1 - g \tilde{\omega}}\, - \,\sqrt{1 - \tilde{\omega}}}',...
                 '{\sqrt{1 - g \tilde{\omega}}\, + \,\sqrt{1 - \tilde{\omega}}}$'];
             t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
-            t.Color = 'white';
+            t.Color = 'black';
             t.FontSize = 25;
             t.FontWeight = 'bold';
-            t.EdgeColor = 'white';
+            t.EdgeColor = 'black';
             t.FitBoxToText = 'on';
 
 
-            legend('$F_{\uparrow}/F_0$ analytical','$F_{\downarrow}/F_0$ analytical',...
-                '$F_{\uparrow}/F_0$ Monte Carlo','$F_{\downarrow}/F_0$ Monte Carlo','Interpreter','latex',...
-                'Location','best')
+            legend('$F_{\uparrow}/F_0$ 2-stream analytical','$F_{\downarrow}/F_0$ 2-stream analytical',...
+                '$F_{\uparrow}/F_0$ 2D Monte Carlo','$F_{\downarrow}/F_0$ 2D Monte Carlo','Interpreter','latex',...
+                'Location','best','FontSize',20)
 
 
-        elseif tau_upper_limit>0 && tau_upper_limit<inf
+        elseif tau_y_upper_limit>0 && tau_y_upper_limit<inf
 
 
             % K is defined in Bohren and Clothiaux (eq. 5.70)
@@ -102,11 +107,11 @@ if inputs.N_layers==1
             R_inf = (sqrt(1-ssa*g) - sqrt(1 - ssa))/(sqrt(1-ssa*g) + sqrt(1 - ssa));
 
             % Define the constants
-            A = (R_inf - albedo_maxTau)*exp(-K*tau_upper_limit)/...
-                (R_inf*(R_inf - albedo_maxTau)*exp(-K*tau_upper_limit) - (1 - albedo_maxTau*R_inf)*exp(K*tau_upper_limit));
+            A = (R_inf - albedo_maxTau)*exp(-K*tau_y_upper_limit)/...
+                (R_inf*(R_inf - albedo_maxTau)*exp(-K*tau_y_upper_limit) - (1 - albedo_maxTau*R_inf)*exp(K*tau_y_upper_limit));
 
-            B = -(1 - R_inf*albedo_maxTau)*exp(K*tau_upper_limit)/...
-                (R_inf*(R_inf - albedo_maxTau)*exp(-K*tau_upper_limit) - (1 - albedo_maxTau*R_inf)*exp(K*tau_upper_limit));
+            B = -(1 - R_inf*albedo_maxTau)*exp(K*tau_y_upper_limit)/...
+                (R_inf*(R_inf - albedo_maxTau)*exp(-K*tau_y_upper_limit) - (1 - albedo_maxTau*R_inf)*exp(K*tau_y_upper_limit));
 
             photon_fraction_up = @(tau) A*exp(K*tau) + B*R_inf*exp(-K*tau);
 
@@ -115,7 +120,7 @@ if inputs.N_layers==1
 
 
             % lets plot some range of tau
-            tau = linspace(tau_lower_limit,tau_upper_limit,100);
+            tau = linspace(tau_y_lower_limit,tau_y_upper_limit,100);
 
             C1 = [8.492724501845559e-01     5.437108503990062e-02     9.681090252965144e-01];
             C2 = [4.843239544631898e-01     7.049687413641152e-01     6.568033076805693e-01];
@@ -137,24 +142,25 @@ if inputs.N_layers==1
 
             dim = [0.7 0.85 0 0];
 
-            texBox_str = {[num2str(inputs.N_photons),' photons'],...
+            texBox_str = {['$N_{photons}^{total} = 10^{', num2str(log10(inputs.N_photons)),'}$'],...
                 ['N layers = ', num2str(inputs.N_layers)],...
                 ['$\lambda$ = ',num2str(inputs.mie.wavelength(1)), ' $nm$'],...
+                ['$\mu_0$ = ',num2str(cosd(inputs.solar_zenith_angle))],...
                 ['$\tilde{\omega}$ = ', num2str(inputs.ssa)], ...
                 ['$g$ = ', num2str(inputs.g)],...
                 ['$r$ = ', num2str(inputs.mie.radius(1)), ' $\mu m$'],...
-                ['$\tau_0$ = ', num2str(inputs.tau_upper_limit)],...
+                ['$\tau_0$ = ', num2str(inputs.tau_y_upper_limit)],...
                 ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
             t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
-            t.Color = 'white';
+            t.Color = 'black';
             t.FontSize = 25;
             t.FontWeight = 'bold';
-            t.EdgeColor = 'white';
+            t.EdgeColor = 'black';
             t.FitBoxToText = 'on';
 
-            legend('$F_{\uparrow}/F_0$ analytical','$F_{\downarrow}/F_0$ analytical',...
-                '$F_{\uparrow}/F_0$ Monte Carlo','$F_{\downarrow}/F_0$ Monte Carlo','Interpreter','latex',...
-                'Location','best')
+            legend('$F_{\uparrow}/F_0$ 2-stream analytical','$F_{\downarrow}/F_0$ 2-stream analytical',...
+                '$F_{\uparrow}/F_0$ 2D Monte Carlo','$F_{\downarrow}/F_0$ 2D Monte Carlo','Interpreter','latex',...
+                'Location','best','FontSize',20)
 
 
         end
@@ -165,22 +171,22 @@ if inputs.N_layers==1
         % Next, check to see if our layer is infinitely thick, or has a finite
         % thickness
 
-        if tau_upper_limit == inf
+        if tau_y_upper_limit == inf
 
 
             error([newline,'I dont know what to do with a layer of infinte thickness and conservative scattering.',newline])
 
-        elseif tau_upper_limit>0 && tau_upper_limit<inf
+        elseif tau_y_upper_limit>0 && tau_y_upper_limit<inf
 
             % For a non-absorbing layer of finite thickness, the analytical
             % solutions to the two stream radiative transfer equations are...
 
-            R_atTop = (tau_upper_limit * (1 - g)/2)/(1 + tau_upper_limit*(1 - g)/2);
+            R_atTop = (tau_y_upper_limit * (1 - g)/2)/(1 + tau_y_upper_limit*(1 - g)/2);
 
-            T_atBottom = 1/(1 + tau_upper_limit*(1 - g)/2);
+            T_atBottom = 1/(1 + tau_y_upper_limit*(1 - g)/2);
 
             % lets plot some range of tau
-            tau = linspace(tau_lower_limit,tau_upper_limit,100);
+            tau = linspace(tau_y_lower_limit,tau_y_upper_limit,100);
 
             C1 = [8.492724501845559e-01     5.437108503990062e-02     9.681090252965144e-01];
             C2 = [4.843239544631898e-01     7.049687413641152e-01     6.568033076805693e-01];
@@ -205,15 +211,15 @@ if inputs.N_layers==1
             texBox_str = {'$R(\tau = 0) = \frac{\bar{\tau}(1 - g)/2}{1 + \bar{\tau}(1 - g)/2}$',...
                 '$T(\tau = \bar{\tau}) = \frac{1}{1 + \bar{\tau}(1 - g)/2}$'};
             t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
-            t.Color = 'white';
+            t.Color = 'black';
             t.FontSize = 25;
             t.FontWeight = 'bold';
-            t.EdgeColor = 'white';
+            t.EdgeColor = 'black';
             t.FitBoxToText = 'on';
 
-            legend('$R_{\infty}$ analytical','$T(\bar{\tau})$ analytical',...
-                '$F_{\uparrow}/F_0$ Monte Carlo','$F_{\downarrow}/F_0$ Monte Carlo','Interpreter','latex',...
-                'Location','best')
+            legend('$R_{\infty}$ 2-stream analytical','$T(\bar{\tau})$ 2-stream analytical',...
+                '$F_{\uparrow}/F_0$ 2D Monte Carlo','$F_{\downarrow}/F_0$ 2D Monte Carlo','Interpreter','latex',...
+                'Location','best','FontSize',20)
 
 
         end
@@ -233,9 +239,12 @@ else
 
     C1 = [8.492724501845559e-01     5.437108503990062e-02     9.681090252965144e-01];
     C2 = [4.843239544631898e-01     7.049687413641152e-01     6.568033076805693e-01];
+    
 
+
+    % -------------------------------------------------------------------------
     % Make 2 subplots showing the results from the Monte Carlo simulation
-    % and the values used for the cloud layers
+    % and the radius value for each layer
     figure; s1 = subplot(1,2,1);
     plot(F_norm.up,binEdges(1:end-1)+diff(binEdges)/2,'Color',C1,'LineStyle',':')
     hold on;
@@ -247,41 +256,44 @@ else
     title({'2 Stream 1D Monte Carlo Model'}, 'Interpreter','latex')
     set(gcf, 'Position',[0 0 1200 630])
 
+
     % Make a text box with the parameters used
     dim = [0.3 0.55 0 0];
 
-    texBox_str = {[num2str(inputs.N_photons),' photons'],...
+    texBox_str = {['$N_{photons}^{total} = 10^{', num2str(log10(inputs.N_photons)),'}$'],...
         ['N layers = ', num2str(inputs.N_layers)],...
         ['$\lambda$ = ',num2str(inputs.mie.wavelength(1)), ' $nm$'],...
+        ['$\mu_0$ = ',num2str(cosd(inputs.solar_zenith_angle))],...
         ['$r_{top}$ = ',num2str(inputs.layerRadii(1)), ' $\mu m$'],...
         ['$r_{bot}$ = ',num2str(inputs.layerRadii(end)), ' $\mu m$'],...
-        ['$\tau_0$ = ', num2str(inputs.tau_upper_limit)],...
+        ['$\tau_0$ = ', num2str(inputs.tau_y_upper_limit)],...
         ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
     t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
-    t.Color = 'white';
+    t.Color = 'black';
     t.FontSize = 25;
     t.FontWeight = 'bold';
-    t.EdgeColor = 'white';
+    t.EdgeColor = 'black';
     t.FitBoxToText = 'on';
 
 
     % Print the legend last so the algorithm doesn't place it in front
     % of the text box
-    legend('$F_{\uparrow}/F_0$ Monte Carlo','$F_{\downarrow}/F_0$ Monte Carlo',...
-        'Interpreter','latex','Location','best')
+    legend('$F_{\uparrow}/F_0$ 2D Monte Carlo','$F_{\downarrow}/F_0$ 2D Monte Carlo',...
+        'Interpreter','latex','Location','best','FontSize',20)
 
 
+    % plot the values of each layer's particle radius at the center of each
+    % layer
+    d_tau = (tau_y_upper_limit - tau_y_lower_limit)/inputs.N_layers;
+    tau_vector = (tau_y_lower_limit+(d_tau/2)):d_tau:(tau_y_upper_limit-(d_tau/2));
 
     s2 = subplot(1,2,2);
-    plot(inputs.ssa,linspace(tau_lower_limit, tau_upper_limit, inputs.N_layers))
-    hold on
-    plot(inputs.g,linspace(tau_lower_limit, tau_upper_limit, inputs.N_layers))
+    plot(inputs.layerRadii,tau_vector,'.','MarkerSize',20)
     grid on; grid minor
     set(gca,'YDir','reverse')
     ylabel('$\tau$','Interpreter','latex');
-    title({'Multi-layer properties'}, 'Interpreter','latex')
-    legend('$\tilde{\omega}$','$g$',...
-        'Interpreter','latex','Location','best')
+    xlabel('$r$ $(\mu m)$', 'Interpreter','latex')
+    title({'Radius of each layer'}, 'Interpreter','latex')
 
     % Now shift the positions of the subfigures
     s1.Position = s1.Position.*[1 1 1.5 1];

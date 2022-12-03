@@ -8,11 +8,11 @@ clear variables
 
 
 % Define the boundaries of the medium
-inputs.tau_lower_limit = 0;
-inputs.tau_upper_limit = 5;
+inputs.tau_y_lower_limit = 0;
+inputs.tau_y_upper_limit = 10;
 
 % Define the albedo of the bottom boundary (tau upper limit)
-inputs.albedo_maxTau = 0.1;
+inputs.albedo_maxTau = 0;
 
 % Layers can differ by radius, by material, or both. If the layers differ
 % by radius, create a vector describing each layer radius from top to
@@ -21,7 +21,7 @@ inputs.albedo_maxTau = 0.1;
 % from top to bottom. If both are true, create a cell array for both the
 % changing radii and the changing index of refraction
 
-inputs.layerRadii = 10;      % radius of spheres in each layer
+inputs.layerRadii = linspace(10,5,100);      % radius of spheres in each layer
 
 % Define the number of layers within the medium that differ
 inputs.N_layers = length(inputs.layerRadii);
@@ -31,7 +31,7 @@ inputs.N_layers = length(inputs.layerRadii);
 inputs.layerBoundaries = linspace(inputs.tau_lower_limit, inputs.tau_upper_limit, inputs.N_layers +1);
 
 % Define the number of photons to inject into the medium
-inputs.N_photons = 1000;
+inputs.N_photons = 1e4;
 
 
 %%  MIE CALCULATIONS
@@ -44,7 +44,7 @@ inputs.N_photons = 1000;
 % define the wavelength
 % The wavelength input is defined as follows:
 % [wavelength_start, wavelength_end, wavelength_step].
-inputs.mie.wavelength = [2125, 2125, 0];          % nanometers
+inputs.mie.wavelength = [2200, 2200, 0];          % nanometers
 
 % The first entry belows describes the type of droplet distribution
 % that should be used. The second describes the distribution width. If
@@ -72,9 +72,18 @@ inputs.mie.indexOfRefraction = 'water';
 if inputs.N_layers==1
     inputs.mie.radius = [inputs.layerRadii, inputs.layerRadii, 0];    % microns
 else
-    inputs.mie.radius = [min(inputs.layerRadii), max(inputs.layerRadii),...
-                         abs(inputs.layerRadii(1) - inputs.layerRadii(2))];    % microns
+    % define the min, max, and step. Record the vector because these are
+    % the exact values used in the mie calculations
+    
+    % min value
+    inputs.mie.radius(1) = min(inputs.layerRadii);
+    % max value
+    inputs.mie.radius(2) = max(inputs.layerRadii);
+    % step value
+    inputs.mie.radius(3) = abs(inputs.layerRadii(1) - inputs.layerRadii(2));    % microns
+
 end
+
 
 
 

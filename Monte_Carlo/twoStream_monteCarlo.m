@@ -1,7 +1,7 @@
 % 2-stream radiative transfer using Monte Carlo methods
 % by Andrew John Buggee
 
-function [F_norm, final_state, photon_tracking, inputs] = twoStream_monteCarlo_test(inputs)
+function [F_norm, final_state, photon_tracking, inputs] = twoStream_monteCarlo(inputs)
 
 % ---------------------------------------
 % ------- Unpack input structure --------
@@ -57,7 +57,7 @@ g = zeros(length(wavelength), length(r));
 ssa = zeros(length(wavelength), length(r));
 for LL = 1:N_layers
     % define the asymmetry parameter
-    index = layerRadii(LL)==r;
+    [~,index] = min(abs(r-layerRadii(LL)));
     g(:,LL) = inputs.g(:,index);
 
     % define the single scattering albedo
