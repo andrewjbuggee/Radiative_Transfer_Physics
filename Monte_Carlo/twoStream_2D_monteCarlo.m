@@ -133,6 +133,7 @@ photon_tau_position = cell(1,N_photons);
 
 % Store the values of the maximum penetration depth for each photon
 max_depth = zeros(1, N_photons);
+max_horizontal_position = zeros(1, N_photons);
 
 % Store the value of the depth at which a photon is absorbed
 depth_absorbed = [];
@@ -637,6 +638,7 @@ parfor nn = 1:N_photons
 
     % Save the maximum y position reached.
     max_depth(nn) = max(photon_tau_position{nn}(:,2));
+    max_horizontal_position(nn) = max(photon_tau_position{nn}(:,1));
 
     % Save the number of scattering events
     % (1) If the final event was absorption, we substract two from the
@@ -888,6 +890,7 @@ final_state.absorbed_INDEX = absorbed_index;
 
 % keep track of the maximum penetration depth of each photon
 photon_tracking.maxDepth = max_depth;
+photon_tracking.max_horizontal_position = max_horizontal_position;
 
 % Count how many times a scatter/absorption event occurs during a photons
 % lifetime. A value of 1 means it was absorbed right away or transmitted
