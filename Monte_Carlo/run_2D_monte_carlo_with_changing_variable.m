@@ -17,13 +17,13 @@ clear variables
 
 
 % Define a set of wavelengths
-%wavelength = [660, 1650, 3700]; 
+wavelength = [578, 710, 915, 1145, 1390]; 
 
 
 % Define a set of optical depths
-Tau = [2, 4, 16, 32];
+%Tau = [2, 4, 16, 32];
 
-for vv = 1:length(Tau)
+for vv = 1:length(wavelength)
 
 
     clear F_norm final_state input_filename inputs mie_folder output_filename photon_tracking
@@ -34,7 +34,7 @@ for vv = 1:length(Tau)
 
     % Define the boundaries of the medium
     inputs.tau_y_lower_limit = 0;
-    inputs.tau_y_upper_limit = Tau(vv);
+    inputs.tau_y_upper_limit = 16;
 
     % Define the albedo of the bottom boundary (tau upper limit)
     inputs.albedo_maxTau = 0;
@@ -153,7 +153,7 @@ for vv = 1:length(Tau)
     % define the wavelength
     % The wavelength input is defined as follows:
     % [wavelength_start, wavelength_end, wavelength_step].
-    inputs.mie.wavelength = [2155, 2155, 0];          % nanometers
+    inputs.mie.wavelength = [wavelength(vv), wavelength(vv), 0];          % nanometers
 
     % The first entry belows describes the type of droplet distribution
     % that should be used. The second describes the distribution width. If
