@@ -30,8 +30,24 @@ legend_str = cell(1,length(filenames));
 
 
 % Open folder where simulations are saved if it's not already open
-saved_simulations = ['/Users/andrewbuggee/Documents/MATLAB/CU Boulder/Radiative_Transfer_Physics/',...
-                    'Monte_Carlo/Monte_Carlo_Simulation_Results'];
+% what computer are we using?
+
+
+if strcmp(whatComputer,'anbu8374')
+
+    saved_simulations = '/Users/anbu8374/Documents/MATLAB/Radiative_Transfer_Physics/Monte_Carlo/Monte_Carlo_Simulation_Results';
+
+
+
+elseif strcmp(whatComputer,'andrewbuggee')
+
+    saved_simulations = ['/Users/andrewbuggee/Documents/MATLAB/CU Boulder/Radiative_Transfer_Physics/',...
+        'Monte_Carlo/Monte_Carlo_Simulation_Results'];
+
+else
+    error('I dont recognize this computer user name')
+end
+
 
 if strcmp(pwd,saved_simulations)==false
     cd(saved_simulations)
@@ -51,9 +67,9 @@ for nn = 1:length(filenames)
 
 
     % First select those photons that were scattered out the top
-    
+
     index_scatter_out_top = final_state.scatter_out_top_INDEX;
-    
+
     [scatter_out_top_maxDepth_PDF, scatter_out_top_maxDepth_PDF_edges] = ...
         histcounts(photon_tracking.maxDepth(index_scatter_out_top),'Normalization',probability_str);
 
@@ -64,7 +80,7 @@ for nn = 1:length(filenames)
     hold on
 
 
-    
+
     % Create legend string
     legend_str{nn} = ['$\mu_0 = ',num2str(round(cosd(changing_variable(nn)),2)),'$'];
 
@@ -82,33 +98,33 @@ ylabel('$\tau$','Interpreter','latex')
 
 % Create title
 if strcmp(probability_str,'probability')==true
-title({'Conditional Probability of photons reaching a max depth of $\tau$'},...
-    'Interpreter','latex')
+    title({'Conditional Probability of photons reaching a max depth of $\tau$'},...
+        'Interpreter','latex')
 
 elseif strcmp(probability_str,'pdf')==true
     title({'Conditional PDF of photons reaching a max depth of $\tau$'},...
-    'Interpreter','latex')
+        'Interpreter','latex')
 end
 
 
 % Create textbox with simulation properties
 
 % Textbox
-    dim = [0.685 0.5 0 0];
+dim = [0.685 0.5 0 0];
 
-    texBox_str = {['$N_{photons}^{total} = 10^{', num2str(log10(inputs.N_photons)),'}$'],...
-        ['N layers = ', num2str(inputs.N_layers)],...
-        ['$\lambda$ = ',num2str(inputs.mie.wavelength(1)), ' $nm$'],...
-        ['$r_{top}$ = ',num2str(round(inputs.layerRadii(1))), ' $\mu m$'],...
-        ['$r_{bot}$ = ',num2str(round(inputs.layerRadii(end))), ' $\mu m$'],...
-        ['$\tau_0$ = ', num2str(inputs.tau_y_upper_limit)],...
-        ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
-    t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
-    t.Color = 'black';
-    t.FontSize = 25;
-    t.FontWeight = 'bold';
-    t.EdgeColor = 'black';
-    t.FitBoxToText = 'on';
+texBox_str = {['$N_{photons}^{total} = 10^{', num2str(log10(inputs.N_photons)),'}$'],...
+    ['N layers = ', num2str(inputs.N_layers)],...
+    ['$\lambda$ = ',num2str(inputs.mie.wavelength(1)), ' $nm$'],...
+    ['$r_{top}$ = ',num2str(round(inputs.layerRadii(1))), ' $\mu m$'],...
+    ['$r_{bot}$ = ',num2str(round(inputs.layerRadii(end))), ' $\mu m$'],...
+    ['$\tau_0$ = ', num2str(inputs.tau_y_upper_limit)],...
+    ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
+t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
+t.Color = 'black';
+t.FontSize = 25;
+t.FontWeight = 'bold';
+t.EdgeColor = 'black';
+t.FitBoxToText = 'on';
 
 
 % Create Legend

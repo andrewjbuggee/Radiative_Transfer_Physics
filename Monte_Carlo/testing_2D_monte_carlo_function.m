@@ -9,7 +9,7 @@ clear variables
 
 % Define the boundaries of the medium
 inputs.tau_y_lower_limit = 0;
-inputs.tau_y_upper_limit = 8;
+inputs.tau_y_upper_limit = 4;
 
 % define the solar zenith angle
 % This is the angle of the incident radiation with respect to the medium
@@ -74,7 +74,7 @@ else
     inputs.dropletProfile.r_bottom = 5;          % microns
 
     % define the number of layers to model within the cloud
-    inputs.dropletProfile.N_layers = 20;
+    inputs.dropletProfile.N_layers = 1000;
 
 
     % Define the boundaries of each tau layer

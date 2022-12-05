@@ -5,16 +5,25 @@
 
 % By Andrew John Buggee
 
-
-% Define Changing Variable
+% ----------------------------------------------------------------------
+% --------------------- DEFINE CHANGING VARIABLE -----------------------
+% ----------------------------------------------------------------------
+clear variables
 
 % define the solar zenith angle
 % This is the angle of the incident radiation with respect to the medium
 % normal direction
-solar_zenith_angle = 20:10:70;                  % deg from zenith
+%solar_zenith_angle = 20:10:70;                  % deg from zenith
 
 
-for vv = 1:length(solar_zenith_angle)
+% Define a set of wavelengths
+%wavelength = [660, 1650, 3700]; 
+
+
+% Define a set of optical depths
+Tau = [2, 4, 16, 32];
+
+for vv = 1:length(Tau)
 
 
     clear F_norm final_state input_filename inputs mie_folder output_filename photon_tracking
@@ -25,7 +34,7 @@ for vv = 1:length(solar_zenith_angle)
 
     % Define the boundaries of the medium
     inputs.tau_y_lower_limit = 0;
-    inputs.tau_y_upper_limit = 8;
+    inputs.tau_y_upper_limit = Tau(vv);
 
     % Define the albedo of the bottom boundary (tau upper limit)
     inputs.albedo_maxTau = 0;
@@ -33,7 +42,7 @@ for vv = 1:length(solar_zenith_angle)
     % define the solar zenith angle
     % This is the angle of the incident radiation with respect to the medium
     % normal direction
-    inputs.solar_zenith_angle = solar_zenith_angle(vv);                  % deg from zenith
+    inputs.solar_zenith_angle = 0;                  % deg from zenith
 
 
     % Define the number of photons to inject into the medium
@@ -90,7 +99,7 @@ for vv = 1:length(solar_zenith_angle)
         inputs.dropletProfile.r_bottom = 5;          % microns
 
         % define the number of layers to model within the cloud
-        inputs.dropletProfile.N_layers = 20;
+        inputs.dropletProfile.N_layers = 100;
 
 
         % Define the boundaries of each tau layer
