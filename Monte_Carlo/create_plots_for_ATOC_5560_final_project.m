@@ -162,7 +162,10 @@ smooth_curves = true;
 
 
 % Define a set of colors based on the number of files
-C = rand(length(filenames), 3);
+C = [0.96,0.42,0.65;...          % Bubble gum pink
+    0.49,0.92,0.04;...          % Neon green
+    0.80,0.79,0.85;...          % A pale grey
+    0.14,0.96,0.93];            % A bright electric blue
 
 
 % Store the number of photons from each simulation
@@ -337,7 +340,7 @@ ylabel('$\tau$','Interpreter','latex')
 
 % Create title
 title({'Conditional probability of photons that scatter out cloud top',...
-        'reaching a max depth of $\tau$'},'Interpreter','latex')
+    'reaching a max depth of $\tau$'},'Interpreter','latex')
 
 
 % Create textbox with simulation properties
@@ -668,7 +671,7 @@ ylabel('$\tau$','Interpreter','latex')
 
 % Create title
 title({'Conditional probability of photons that scatter out cloud top',...
-        'reaching a max depth of $\tau$'},'Interpreter','latex')
+    'reaching a max depth of $\tau$'},'Interpreter','latex')
 
 
 % Create textbox with simulation properties
@@ -734,7 +737,7 @@ C = [0.979748378356085,   0.594896074008614,   0.117417650855806;...
 
 % Define the color of the radius curve plot define
 radius_color = [0.827450980392157, 0.368627450980392, 0.376470588235294];           %  A pleasing salmon red
-    
+
 
 % Store the number of photons from each simulation
 legend_str = cell(1,length(filenames));
@@ -807,8 +810,8 @@ for nn = 1:length(filenames)
     % -------------------------------------------------------------
     % -------------------------------------------------------------
 
-    % Plot line of constant average tau 
-    
+    % Plot line of constant average tau
+
     if nn==length(wavelength)
         % Attach a label to our constant horizontal line
 
@@ -902,5 +905,281 @@ set(gcf, 'Position',[0 0 1000 630])
 % Clear the file variables because they take up a lot of memory
 clear F_norm photon_tracking final_state inputs
 
+
+
+
+
+%% How do the Weighting functions change with optical depth?
+
+
+
+
+clear variables
+
+% Define the set of wavelengths used for this analysis
+Tau = [2,4,8,16,32];
+
+% Define the set of filenames to use
+filenames = {'2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_2_SZA_0.mat',...
+    '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_4_SZA_0.mat',...
+    '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_8_SZA_0.mat',...
+    '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+    '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_32_SZA_0.mat'};
+
+
+% Do you want to plot the probability of a set of PDF's?
+probability_str = 'pdf';
+
+
+
+% Do you want to smooth the raw PDF's?
+smooth_curves = true;
+
+
+% Define a set of colors based on the number of files
+C = [0.979748378356085,   0.594896074008614,   0.117417650855806;...
+    0.438869973126103,   0.262211747780845,   0.296675873218327;...
+    0.111119223440599,   0.602843089382083,   0.318778301925882;...
+    0.8492724501845559,  0.05437108503990062, 0.9681090252965144;...
+    0.3563645953575846,  0.4380836048512262,  0.5147715889386915];
+
+
+% Store the number of photons from each simulation
+legend_str = cell(1,length(filenames));
+
+
+
+% Define axes font size
+gca_ax_font_size = 12;
+y_label_font_size = 35;
+x_label_font_size = 18;
+font_size_title = 35;
+
+
+% Open folder where simulations are saved if it's not already open
+% what computer are we using?
+
+
+if strcmp(whatComputer,'anbu8374')
+
+    saved_simulations = '/Users/anbu8374/Documents/MATLAB/Radiative_Transfer_Physics/Monte_Carlo/Monte_Carlo_Simulation_Results';
+
+
+
+elseif strcmp(whatComputer,'andrewbuggee')
+
+    saved_simulations = ['/Users/andrewbuggee/Documents/MATLAB/CU Boulder/Radiative_Transfer_Physics/',...
+        'Monte_Carlo/Monte_Carlo_Simulation_Results'];
+
+else
+    error('I dont recognize this computer user name')
+end
+
+
+if strcmp(pwd,saved_simulations)==false
+    cd(saved_simulations)
+end
+
+
+% Store the subplot axes object
+s = cell(1, length(Tau));
+
+
+% Start figure
+figure;
+
+if smooth_curves==false
+
+    % Plot the raw PDF's
+
+    for nn = 1:length(filenames)
+
+        % Clear the file variables because they take up a lot of memory
+        clear F_norm photon_tracking final_state inputs
+
+        % Load a simulation
+        load(filenames{nn})
+
+
+
+        % First select those photons that were scattered out the top
+
+        index_scatter_out_top = final_state.scatter_out_top_INDEX;
+
+        [scatter_out_top_maxDepth_PDF, scatter_out_top_maxDepth_PDF_tau_edges] = ...
+            histcounts(photon_tracking.maxDepth(index_scatter_out_top),'Normalization',probability_str);
+
+
+
+        % Plot the conditional probability
+        s{nn} = subplot(1, length(Tau), nn);
+        plot(scatter_out_top_maxDepth_PDF,...
+            scatter_out_top_maxDepth_PDF_tau_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_tau_edges)/2, 'Color',C(nn,:))
+        hold on
+
+
+
+        % Create Legend
+        legend(['$\tau_0 = $',num2str((Tau(nn)))],'Interpreter','latex','Location','best',...
+            'FontSize',22)
+
+
+
+
+    end
+
+
+
+else
+
+    % If this is true, we smooth each PDF to make a nice pretty plot, but
+    % at the expense of loosing the PDF (the smoothed functions likely
+    % won't integrate to 0)
+
+
+    for nn = 1:length(filenames)
+
+        % Clear the file variables because they take up a lot of memory
+        clear F_norm photon_tracking final_state inputs
+
+        % Load a simulation
+        load(filenames{nn})
+
+
+
+        % First select those photons that were scattered out the top
+
+        index_scatter_out_top = final_state.scatter_out_top_INDEX;
+
+        [scatter_out_top_maxDepth_PDF, scatter_out_top_maxDepth_PDF_tau_edges] = ...
+            histcounts(photon_tracking.maxDepth(index_scatter_out_top),'Normalization',probability_str);
+
+
+
+        % -------------------------------------------------------------
+        % Integrate the drolet profile with the weighting function to
+        % get an average effective radius measured, and thus an average
+        % optical depth.
+        % -------------------------------------------------------------
+        if nn~=1
+            % create an re vector that is the same length as our weighting
+            % function
+            new_tau = linspace(inputs.dropletProfile.tau_layer_mid_points(1), inputs.dropletProfile.tau_layer_mid_points(end), length(scatter_out_top_maxDepth_PDF));
+            re = interp1(inputs.dropletProfile.tau_layer_mid_points, inputs.dropletProfile.re, new_tau);
+            re_avg = trapz(new_tau, re .* scatter_out_top_maxDepth_PDF);
+            tau_avg(nn) = interp1(re, new_tau,re_avg);
+
+
+        end
+        % -------------------------------------------------------------
+        % -------------------------------------------------------------
+
+        % Create smooth spline function
+        f=fit((scatter_out_top_maxDepth_PDF_tau_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_tau_edges)/2)',scatter_out_top_maxDepth_PDF', 'smoothingspline','SmoothingParam',0.95);
+
+        % Plot the conditional probability
+        s{nn} = subplot(1,length(Tau),nn);
+        plot(f(scatter_out_top_maxDepth_PDF_tau_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_tau_edges)/2),...
+            scatter_out_top_maxDepth_PDF_tau_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_tau_edges)/2, 'Color',C(nn,:))
+        hold on
+
+
+        % Set the yaxis tick labels
+        set(gca,'YTick', (0:inputs.tau_y_upper_limit/8:inputs.tau_y_upper_limit))
+        set(gca,'YTickLabel',(0:inputs.tau_y_upper_limit/8:inputs.tau_y_upper_limit))
+        set(gca,'FontSize',gca_ax_font_size)
+
+        % Define y limits
+        ylim([0, inputs.tau_y_upper_limit]);
+
+        % Switch y axis direction
+        set(gca, 'YDir','reverse')
+        grid on; grid minor
+
+
+        % set x axis label
+        xlabel('$P(\tau)$','Interpreter','latex', 'FontSize',x_label_font_size);
+
+        if nn==1
+            % only make th y axis label on the first subfigure
+            ylabel('$\tau$','Interpreter','latex', 'FontSize',y_label_font_size)
+
+
+        end
+
+
+        % Create title for the center subfigure only
+        if nn==3
+            title('Weighting Functions for different Optical Thicknesses', 'Interpreter','latex',...
+                'FontSize',font_size_title)
+        end
+
+
+        % Arrange the position of each subfigure
+
+
+
+        % Create Legend
+        if nn==1 || nn==2
+            legend(['$\tau_0 = $',num2str((Tau(nn)))],'Interpreter','latex','Location','southwest',...
+                'FontSize',22)
+
+        else
+            legend(['$\tau_0 = $',num2str((Tau(nn)))],'Interpreter','latex','Location','southeast',...
+                'FontSize',22)
+        end
+
+
+
+
+
+    end
+
+
+
+
+end
+
+
+
+
+% Now shift the positions of the subfigures
+% The vector is defined as [X_position, y_position, Height, Width]
+s{1}.Position = [0.0911923076923077 0.11 0.123739495798319 0.815];
+s{2}.Position = [0.245866677440206 0.11 0.123739495798319 0.815];
+s{3}.Position = [0.400541047188106 0.11 0.123739495798319 0.815];
+s{4}.Position = [0.555215416936003 0.11 0.123739495798319 0.815];
+s{5}.Position = [0.709889786683902 0.11 0.123739495798319 0.815];
+
+
+% Plot the textbox withall relevant model parameters
+% Create textbox with simulation properties
+
+% Textbox
+dim = [0.846538461538462 0.298055327884735 0.148878449660081 0.349563719734313];
+
+texBox_str = {['$N_{photons}^{total} = 10^{', num2str(log10(inputs.N_photons)),'}$'],...
+    ['N layers = ', num2str(inputs.N_layers)],...
+    ['$\lambda$ = ',num2str(inputs.mie.wavelength(1)), ' $nm$'],...
+    ['$\mu_0$ = ',num2str(round(cosd(inputs.solar_zenith_angle),2))],...
+    ['$r_{top}$ = ',num2str(round(inputs.layerRadii(1))), ' $\mu m$'],...
+    ['$r_{bot}$ = ',num2str(round(inputs.layerRadii(end))), ' $\mu m$'],...
+    ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
+t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
+t.Color = 'black';
+t.FontSize = 25;
+t.FontWeight = 'bold';
+t.EdgeColor = 'black';
+t.FitBoxToText = 'on';
+
+
+
+
+% Set size of the entire figure
+set(gcf, 'Position',[0 0 1300 630])
+
+
+% Clear the file variables because they take up a lot of memory
+clear F_norm photon_tracking final_state inputs
 
 
