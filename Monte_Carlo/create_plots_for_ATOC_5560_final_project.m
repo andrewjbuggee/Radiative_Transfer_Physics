@@ -1183,3 +1183,210 @@ set(gcf, 'Position',[0 0 1300 630])
 clear F_norm photon_tracking final_state inputs
 
 
+
+
+%% Create Bar Chart Plot with Final States for Multiple files with Different Tau values
+
+clear variables
+
+% Define the set of wavelengths used for this analysis
+Tau = [2,4,8,16,32];
+
+% Define the set of filenames to use
+filenames = {'2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_2_SZA_0.mat',...
+    '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_4_SZA_0.mat',...
+    '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_8_SZA_0.mat',...
+    '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+    '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_32_SZA_0.mat'};
+
+
+% Set up matrix
+Y = zeros(length(Tau), 3);
+
+
+% set up legend string
+legend_str = cell(1, length(Tau));
+
+
+% Define a set of colors based on the number of files
+C = [0.979748378356085,   0.594896074008614,   0.117417650855806;...
+    0.438869973126103,   0.262211747780845,   0.296675873218327;...
+    0.111119223440599,   0.602843089382083,   0.318778301925882;...
+    0.8492724501845559,  0.05437108503990062, 0.9681090252965144;...
+    0.3563645953575846,  0.4380836048512262,  0.5147715889386915];
+
+
+
+for nn = 1:length(Tau)
+
+    % Clear the file variables because they take up a lot of memory
+    clear F_norm photon_tracking final_state inputs
+
+    % Load a simulation
+    load(filenames{nn},'final_state', 'inputs');
+
+    Y(nn,:) = [final_state.scatter_out_top, final_state.scatter_out_bottom, final_state.absorbed]./inputs.N_photons;
+
+
+    legend_str{nn} = ['$\tau_0 = $',num2str((Tau(nn)))];
+
+end
+
+
+figure;
+X = categorical({'Scatter out top','Scatter out Bottom','Absorbed'});
+
+b = bar(X,Y,'grouped');
+
+% Set up bar labels
+for nn = 1:length(Tau)
+    bar_label_xLocation = b(nn).XEndPoints;
+    bar_label_yLocation = b(nn).YEndPoints;
+    bar_labels = string(round(b(nn).YData, 2));
+    text(bar_label_xLocation,bar_label_yLocation,bar_labels,'HorizontalAlignment','center',...
+        'VerticalAlignment','bottom','FontSize',20,'FontWeight','bold','Interpreter','latex')
+    
+    % set bar color
+    b(nn).FaceColor = C(nn,:);
+end
+
+
+
+set(gca,'TickLabelInterpreter', 'latex','FontSize',25);
+set(gca, 'TitleFontSizeMultiplier',1.3)
+
+
+legend(legend_str,'Interpreter','latex','Location','southeast',...
+                'FontSize',22)
+
+
+grid on; grid minor
+ylabel('Percentage','Interpreter','latex')
+title('Probability of each final state', 'Interpreter','latex')
+
+
+set(gcf, 'Position',[0 0 1300 830])
+
+
+ylim([0 1])
+
+
+dim = [0.7 0.85 0 0];
+texBox_str = {['$N_{photons}^{total} = 10^{', num2str(log10(inputs.N_photons)),'}$'],...
+    ['N layers = ', num2str(inputs.N_layers)],...
+    ['$\lambda$ = ',num2str(inputs.mie.wavelength(1)), ' $nm$'],...
+    ['$\mu_0$ = ',num2str(round(cosd(inputs.solar_zenith_angle),2))],...
+    ['$r_{top}$ = ',num2str(round(inputs.layerRadii(1))), ' $\mu m$'],...
+    ['$r_{bot}$ = ',num2str(round(inputs.layerRadii(end))), ' $\mu m$'],...
+    ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
+t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
+t.Color = 'black';
+t.FontSize = 25;
+t.FontWeight = 'bold';
+t.EdgeColor = 'black';
+t.FitBoxToText = 'on';
+
+
+
+
+
+
+
+%% Plot histogram of horizontal travel for multiple files that vary with tau
+
+clear variables
+
+% Define the set of wavelengths used for this analysis
+Tau = [2,4,8,16,32];
+
+% Define the set of filenames to use
+filenames = {'2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_2_SZA_0.mat',...
+    '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_4_SZA_0.mat',...
+    '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_8_SZA_0.mat',...
+    '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+    '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_32_SZA_0.mat'};
+
+
+% Set up matrix
+Y = zeros(length(Tau), 3);
+
+
+% set up legend string
+legend_str = cell(1, length(Tau));
+
+
+
+% Define a set of colors based on the number of files
+C = [0.979748378356085,   0.594896074008614,   0.117417650855806;...
+    0.438869973126103,   0.262211747780845,   0.296675873218327;...
+    0.111119223440599,   0.602843089382083,   0.318778301925882;...
+    0.8492724501845559,  0.05437108503990062, 0.9681090252965144;...
+    0.3563645953575846,  0.4380836048512262,  0.5147715889386915];
+
+
+figure;
+
+for nn = 1:length(Tau)
+
+    % Clear the file variables because they take up a lot of memory
+    clear F_norm photon_tracking final_state inputs
+
+    % Load a simulation
+    load(filenames{nn},'photon_tracking', 'inputs');
+    
+    s{nn} = subplot(1, length(Tau), nn);
+    histogram(abs(photon_tracking.max_horizontal_position),'NumBins',100, 'EdgeColor','none',...
+        'FaceColor',C(nn,:));
+    hold on
+    xlim([0, 150])
+
+    legend(['$\tau_0 = $',num2str((Tau(nn)))],'Interpreter','latex','Location','northwest',...
+                'FontSize',22)
+
+    set(gca,'YScale', 'log')
+
+    grid on; grid minor
+
+    if nn == 1
+        ylabel('Counts','Interpreter','latex')
+    elseif nn==3
+        xlabel('Horizontal Optical Depth','Interpreter','latex')
+        title('Histogram of Maximum Horizontal Distance Travelled', 'Interpreter','latex')
+
+    end
+
+
+end
+
+
+% Now shift the positions of the subfigures
+% The vector is defined as [X_position, y_position, Height, Width]
+s{1}.Position = [0.0911923076923077 0.11 0.123739495798319 0.815];
+s{2}.Position = [0.245866677440206 0.11 0.123739495798319 0.815];
+s{3}.Position = [0.400541047188106 0.11 0.123739495798319 0.815];
+s{4}.Position = [0.555215416936003 0.11 0.123739495798319 0.815];
+s{5}.Position = [0.709889786683902 0.11 0.123739495798319 0.815];
+
+
+
+
+
+set(gcf, 'Position',[0 0 1300 730])
+
+
+dim = [0.846538461538462 0.298055327884735 0.148878449660081 0.349563719734313];
+texBox_str = {['$N_{photons}^{total} = 10^{', num2str(log10(inputs.N_photons)),'}$'],...
+    ['N layers = ', num2str(inputs.N_layers)],...
+    ['$\lambda$ = ',num2str(inputs.mie.wavelength(1)), ' $nm$'],...
+    ['$\mu_0$ = ',num2str(round(cosd(inputs.solar_zenith_angle),2))],...
+    ['$r_{top}$ = ',num2str(round(inputs.layerRadii(1))), ' $\mu m$'],...
+    ['$r_{bot}$ = ',num2str(round(inputs.layerRadii(end))), ' $\mu m$'],...
+    ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
+t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
+t.Color = 'black';
+t.FontSize = 25;
+t.FontWeight = 'bold';
+t.EdgeColor = 'black';
+t.FitBoxToText = 'on';
+
+
