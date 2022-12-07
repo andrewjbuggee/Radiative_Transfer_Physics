@@ -17,7 +17,7 @@ clear variables
 
 
 % Define a set of wavelengths
-wavelength = [578, 710, 915, 1145, 1390]; 
+wavelength = [1450, 1550, 1750, 1850, 1950, 2250]; 
 
 
 % Define a set of optical depths
