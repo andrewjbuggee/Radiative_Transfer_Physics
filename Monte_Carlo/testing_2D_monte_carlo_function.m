@@ -14,14 +14,14 @@ inputs.tau_y_upper_limit = 4;
 % define the solar zenith angle
 % This is the angle of the incident radiation with respect to the medium
 % normal direction
-inputs.solar_zenith_angle = 0;                  % deg from zenith
+inputs.solar_zenith_angle = 60;                  % deg from zenith
 
 % Define the albedo of the bottom boundary (tau upper limit)
-inputs.albedo_maxTau = 0;
+inputs.albedo_maxTau = 1;
 
 
 % Define the number of photons to inject into the medium
-inputs.N_photons = 1e7;
+inputs.N_photons = 1e4;
 
 
 % ----------------------------------------------------------------------
@@ -37,7 +37,7 @@ inputs.N_photons = 1e7;
 
 % ----- Do you want to create a non-linear droplet profile? -----
 
-inputs.createDropletProfile = true;
+inputs.createDropletProfile = false;
 
 
 
@@ -46,7 +46,7 @@ if inputs.createDropletProfile==false
 
     % This options creates a simple cloud with a linear droplet profile
     % or a homogenous cloud with a single radii
-    inputs.layerRadii = linspace(25,5,10);      % radius of spheres in each layer
+    inputs.layerRadii = linspace(10,5,20);      % radius of spheres in each layer
 
 
     % Define the number of layers and the boundaries values for each tau
@@ -74,7 +74,7 @@ else
     inputs.dropletProfile.r_bottom = 5;          % microns
 
     % define the number of layers to model within the cloud
-    inputs.dropletProfile.N_layers = 1000;
+    inputs.dropletProfile.N_layers = 100;
 
 
     % Define the boundaries of each tau layer
@@ -128,7 +128,7 @@ end
 % define the wavelength
 % The wavelength input is defined as follows:
 % [wavelength_start, wavelength_end, wavelength_step].
-inputs.mie.wavelength = [2155, 2155, 0];          % nanometers
+inputs.mie.wavelength = [550, 550, 0];          % nanometers
 
 % The first entry belows describes the type of droplet distribution
 % that should be used. The second describes the distribution width. If
@@ -156,6 +156,23 @@ inputs.mie.indexOfRefraction = 'water';
 if inputs.N_layers==1
 
     inputs.mie.radius = [inputs.layerRadii, inputs.layerRadii, 0];    % microns
+
+
+
+    % Create a mie file
+    [input_filename, output_filename, mie_folder] = write_mie_file(inputs.mie.mie_program, inputs.mie.indexOfRefraction,...
+        inputs.mie.radius,inputs.mie.wavelength,inputs.mie.distribution, inputs.mie.err_msg_str);
+
+    % run the mie file
+    [~] = runMIE(mie_folder,input_filename,output_filename);
+
+
+    % Read the output of the mie file
+    % --------------------------------------------------
+    % Outputs vary by wavelength along the row dimension
+    % Outputs vary by radii along the column dimension
+    % --------------------------------------------------
+    [ds,~,~] = readMIE(mie_folder,output_filename);
 
 
     % Define the asymmetry parameter
@@ -289,7 +306,7 @@ clear ds
 %% Do you want to integrate over a size distribution?
 
 % --------------------------------------------------
-inputs.mie.integrate_over_size_distribution = true;
+inputs.mie.integrate_over_size_distribution = false;
 % --------------------------------------------------
 
 
@@ -314,8 +331,15 @@ end
 
 
 %% Run 2 stream 2D monte carlo code
+
 tic
-[F_norm, final_state, photon_tracking, inputs] = twoStream_2D_monteCarlo(inputs);
+
+% ------- Without Live Plotting ---------
+%[F_norm, final_state, photon_tracking, inputs] = twoStream_2D_monteCarlo(inputs);
+
+% ---------- With Live Plotting ---------
+[F_norm, final_state, photon_tracking, inputs] = twoStream_2D_monteCarlo_withLivePlot(inputs);
+
 toc
 
 
