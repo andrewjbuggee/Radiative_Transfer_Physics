@@ -1390,3 +1390,684 @@ t.EdgeColor = 'black';
 t.FitBoxToText = 'on';
 
 
+
+
+
+%% Create my own version of the S.Platnick (2000) figure 4 weighting function plot
+
+clear variables
+
+% Define the set of wavelengths used for this analysis
+%wavelength = [578, 915, 1145, 1390, 1450, 1550, 1750, 1850, 1950, 2155, 2250];
+
+% filenames = {'2D_MC_04-Dec-2022_Wavelength_578_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+%     '2D_MC_05-Dec-2022_Wavelength_915_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+%     '2D_MC_05-Dec-2022_Wavelength_1145_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+%     '2D_MC_05-Dec-2022_Wavelength_1390_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+%     '2D_MC_05-Dec-2022_Wavelength_1450_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+%     '2D_MC_05-Dec-2022_Wavelength_1550_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+%     '2D_MC_05-Dec-2022_Wavelength_1750_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+%     '2D_MC_05-Dec-2022_Wavelength_1850_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+%     '2D_MC_05-Dec-2022_Wavelength_1950_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+%     '2D_MC_04-Dec-2022_Wavelength_2155_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+%     '2D_MC_05-Dec-2022_Wavelength_2250_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat'};
+
+
+wavelength = [578, 1145, 1450, 1850, 1950, 2250];
+
+
+filenames = {'2D_MC_04-Dec-2022_Wavelength_578_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+    '2D_MC_05-Dec-2022_Wavelength_1145_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+    '2D_MC_05-Dec-2022_Wavelength_1450_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+    '2D_MC_05-Dec-2022_Wavelength_1850_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+    '2D_MC_05-Dec-2022_Wavelength_1950_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+    '2D_MC_05-Dec-2022_Wavelength_2250_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat'};
+
+
+
+
+% Do you want to plot the probability of a set of PDF's?
+probability_str = 'pdf';
+
+
+
+% Do you want to smooth the raw PDF's?
+smooth_curves = true;
+
+
+% Define a set of colors based on the number of files
+C = mySavedColors(1:length(wavelength), 'fixed');
+
+
+% Store the number of photons from each simulation
+legend_str = cell(1,length(filenames));
+
+% Store horizontal labels
+horizontal_label = cell(1, length(wavelength));
+
+
+% keep track of horizontal line indexes
+horizontal_line_index = [];
+
+
+% Set a reasonable value for Number concentration
+
+Nc = 125;           % total number of droplets per cubic centimeter
+
+
+% Open folder where simulations are saved if it's not already open
+% what computer are we using?
+
+
+if strcmp(whatComputer,'anbu8374')
+
+    saved_simulations = '/Users/anbu8374/Documents/MATLAB/Radiative_Transfer_Physics/Monte_Carlo/Monte_Carlo_Simulation_Results';
+
+
+
+elseif strcmp(whatComputer,'andrewbuggee')
+
+    saved_simulations = ['/Users/andrewbuggee/Documents/MATLAB/CU Boulder/Radiative_Transfer_Physics/',...
+        'Monte_Carlo/Monte_Carlo_Simulation_Results'];
+
+else
+    error('I dont recognize this computer user name')
+end
+
+
+if strcmp(pwd,saved_simulations)==false
+    cd(saved_simulations)
+end
+
+
+
+% Start figure
+figure;
+
+if smooth_curves==false
+
+    % Plot the raw PDF's
+
+    for nn = 1:length(filenames)
+
+
+        % Load a simulation
+        load(filenames{nn})
+
+
+
+        % First select those photons that were scattered out the top
+
+        index_scatter_out_top = final_state.scatter_out_top_INDEX;
+
+        [scatter_out_top_maxDepth_PDF, scatter_out_top_maxDepth_PDF_tau_edges] = ...
+            histcounts(photon_tracking.maxDepth(index_scatter_out_top),'Normalization',probability_str);
+
+
+
+        % Plot the conditional probability
+        plot(scatter_out_top_maxDepth_PDF,...
+            scatter_out_top_maxDepth_PDF_tau_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_tau_edges)/2, 'Color',C(nn,:))
+        hold on
+
+
+
+        % Create legend string
+        legend_str{nn} = ['$\lambda = ',num2str((wavelength(nn))),'$ nm'];
+
+
+
+
+    end
+
+
+
+else
+
+    % If this is true, we smooth each PDF to make a nice pretty plot, but
+    % at the expense of loosing the PDF (the smoothed functions likely
+    % won't integrate to 0)
+
+
+    for nn = 1:length(filenames)
+
+
+        % Load a simulation
+        load(filenames{nn})
+
+
+        % Compute the z component for the first wavelength
+        if nn==1
+            for ii = 1:length(inputs.dropletProfile.re)
+
+                if ii==1
+                    dz(ii) = inputs.dropletProfile.tau_layer_mid_points(ii)/...
+                        (inputs.Qe_avg(ii) * pi * (inputs.layerRadii(ii) * 1e-6)^2 * Nc*(1e6));
+
+                else
+                    dz(ii) = (inputs.dropletProfile.tau_layer_mid_points(ii) - inputs.dropletProfile.tau_layer_mid_points(ii-1))/...
+                        (inputs.Qe_avg(ii) * pi * (inputs.layerRadii(ii) * 1e-6)^2 * Nc*(1e6));
+
+                end
+
+            end
+
+            total_z_depth = sum(dz);
+        end
+
+
+
+        % First select those photons that were scattered out the top
+
+        index_scatter_out_top = final_state.scatter_out_top_INDEX;
+
+        [scatter_out_top_maxDepth_PDF, scatter_out_top_maxDepth_PDF_tau_edges] = ...
+            histcounts(photon_tracking.maxDepth(index_scatter_out_top),'Normalization',probability_str);
+
+
+
+        % -------------------------------------------------------------
+        % Integrate the drolet profile with the weighting function to
+        % get an average effective radius measured, and thus an average
+        % optical depth.
+        % -------------------------------------------------------------
+        %if nn==1 || nn==7 || nn==8 || nn ==9 || nn==11
+        if nn==1 || nn==5 || nn==6
+            % create an re vector that is the same length as our weighting
+            % function
+            horizontal_line_index = [horizontal_line_index, nn];
+            new_tau = linspace(inputs.dropletProfile.tau_layer_mid_points(1), inputs.dropletProfile.tau_layer_mid_points(end), length(scatter_out_top_maxDepth_PDF));
+            re = interp1(inputs.dropletProfile.tau_layer_mid_points, inputs.dropletProfile.re, new_tau);
+            re_avg = trapz(new_tau, re .* scatter_out_top_maxDepth_PDF);
+            tau_avg(nn) = interp1(re, new_tau,re_avg);
+            
+            horizontal_label{nn} = ['Depth of retrieved $r_e$ for ',num2str(wavelength(nn)/1e3),' $\mu m$'];
+
+
+        end
+        % -------------------------------------------------------------
+        % -------------------------------------------------------------
+
+        % Create smooth spline function
+        f=fit((scatter_out_top_maxDepth_PDF_tau_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_tau_edges)/2)',scatter_out_top_maxDepth_PDF', 'smoothingspline','SmoothingParam',0.95);
+
+        % Plot the conditional probability
+        plot(f(scatter_out_top_maxDepth_PDF_tau_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_tau_edges)/2),...
+            scatter_out_top_maxDepth_PDF_tau_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_tau_edges)/2, 'Color',C(nn,:))
+        hold on
+
+
+
+        % Create legend string
+        legend_str{nn} = ['$\lambda = ',num2str((wavelength(nn))),'$ nm'];
+
+
+
+
+    end
+
+
+
+
+
+
+
+end
+
+
+% horizontal line width
+horizontal_linewidth = 3;
+line_font_size = 22;
+
+for ii = 1:length(horizontal_line_index)
+
+
+    if rem(ii,2)~=0
+
+        % Plot line of constant average tau
+
+        yline(tau_avg(horizontal_line_index(ii)),'LineWidth',horizontal_linewidth, 'LineStyle',':','Color','k','Label',...
+            horizontal_label{horizontal_line_index(ii)}, 'Interpreter','latex',...
+            'FontSize',line_font_size,'LabelVerticalAlignment','middle', 'LabelHorizontalAlignment','right')
+
+
+    elseif rem(ii,2)==0
+
+        % Plot line of constant average tau
+
+        yline(tau_avg(horizontal_line_index(ii)),'LineWidth',horizontal_linewidth, 'LineStyle',':','Color','k','Label',...
+            horizontal_label{horizontal_line_index(ii)}, 'Interpreter','latex',...
+            'FontSize',line_font_size,'LabelVerticalAlignment','middle', 'LabelHorizontalAlignment','right')
+
+    end
+
+
+end
+
+
+
+
+
+
+% Set axes tick label font size
+set(gca,'FontSize',25)
+
+% Set up axes labels
+set(gca, 'YDir','reverse')
+grid on; grid minor
+xlabel('$P(\tau)$','Interpreter','latex', 'FontSize',35)
+ylabel('$\tau$','Interpreter','latex', 'FontSize',35)
+
+% Create title
+title({'Conditional probability of photons that scatter out cloud top',...
+    'reaching a max depth of $\tau$'},'Interpreter','latex', 'FontSize',40)
+
+
+% Create textbox with simulation properties
+
+% Textbox
+dim = [0.685 0.5 0 0];
+
+texBox_str = {['$N_{photons}^{total} = 10^{', num2str(log10(inputs.N_photons)),'}$'],...
+    ['N layers = ', num2str(inputs.N_layers)],...
+    ['$\mu_0$ = ',num2str(round(cosd(inputs.solar_zenith_angle),2))],...
+    ['$r_{top}$ = ',num2str(round(inputs.layerRadii(1))), ' $\mu m$'],...
+    ['$r_{bot}$ = ',num2str(round(inputs.layerRadii(end))), ' $\mu m$'],...
+    ['$\tau_0$ = ', num2str(inputs.tau_y_upper_limit)],...
+    ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
+t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
+t.Color = 'black';
+t.FontSize = 25;
+t.FontWeight = 'bold';
+t.EdgeColor = 'black';
+t.FitBoxToText = 'on';
+
+
+% Create Legend
+legend(legend_str,'Interpreter','latex','Location','best','FontSize',25)
+
+
+% Plot the z-space in meters on the right axis
+yyaxis right
+ylim([0, total_z_depth])
+set(gca,'YColor','black')
+ylabel('Altitude within cloud $(m)$', 'Interpreter','latex','FontSize',30); 
+yyaxis left
+
+% Label cloud top and cloud bottom
+% Create textbox
+annotation('textbox',...
+    [0.04 0.0866666666666667 0.0913076923076923 0.0422222222222221],...
+    'String','Cloud Bottom',...
+    'LineStyle','none',...
+    'Interpreter','latex',...
+    'FontSize',22,...
+    'FontName','Helvetica Neue',...
+    'FitBoxToText','off');
+
+% Create textbox
+annotation('textbox',...
+    [0.04 0.838888888888889 0.049769230769231 0.0666666666666665],...
+    'String','Cloud Top',...
+    'LineStyle','none',...
+    'Interpreter','latex',...
+    'FontSize',22,...
+    'FontName','Helvetica Neue',...
+    'FitBoxToText','off');
+
+
+
+
+
+set(gcf, 'Position',[0 0 1300 900])
+
+
+clear variables
+
+
+
+
+
+
+%% Create Platnick figure 4 with another set of wavelengths and a solar zenith angle of 45
+
+
+clear variables
+
+
+% Wavelengths used
+% wavelength = [625, 875, 1050, 1250, 1400, 1590, 1625, 1850, 1900, 2150, 2250]; 
+
+
+
+% filenames = {'2D_MC_08-Dec-2022_Wavelength_625_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+%     '2D_MC_08-Dec-2022_Wavelength_875_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+%     '2D_MC_08-Dec-2022_Wavelength_1050_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+%     '2D_MC_08-Dec-2022_Wavelength_1250_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+%     '2D_MC_08-Dec-2022_Wavelength_1400_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+%     '2D_MC_08-Dec-2022_Wavelength_1590_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+%     '2D_MC_08-Dec-2022_Wavelength_1625_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+%     '2D_MC_08-Dec-2022_Wavelength_1850_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+%     '2D_MC_08-Dec-2022_Wavelength_1900_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+%     '2D_MC_08-Dec-2022_Wavelength_2150_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+%     '2D_MC_08-Dec-2022_Wavelength_2250_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat'};
+
+
+
+
+
+% Wavelengths used
+wavelength = [625, 1250, 1590, 1625, 1850, 1900, 2250]; 
+
+
+
+filenames = {'2D_MC_08-Dec-2022_Wavelength_625_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+    '2D_MC_08-Dec-2022_Wavelength_1250_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+    '2D_MC_08-Dec-2022_Wavelength_1590_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+    '2D_MC_08-Dec-2022_Wavelength_1625_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+    '2D_MC_08-Dec-2022_Wavelength_1850_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+    '2D_MC_08-Dec-2022_Wavelength_1900_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat',...
+    '2D_MC_08-Dec-2022_Wavelength_2250_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_45.mat'};
+
+
+
+
+% Do you want to plot the probability of a set of PDF's?
+probability_str = 'pdf';
+
+
+
+% Do you want to smooth the raw PDF's?
+smooth_curves = true;
+
+
+% Define a set of colors based on the number of files
+C = mySavedColors(1:length(wavelength), 'fixed');
+
+
+% Store the number of photons from each simulation
+legend_str = cell(1,length(filenames));
+
+% Store horizontal labels
+horizontal_label = cell(1, length(wavelength));
+
+
+% keep track of horizontal line indexes
+horizontal_line_index = [];
+
+% Set a reasonable value for Number concentration
+
+Nc = 125;           % total number of droplets per cubic centimeter
+
+% Open folder where simulations are saved if it's not already open
+% what computer are we using?
+
+
+if strcmp(whatComputer,'anbu8374')
+
+    saved_simulations = '/Users/anbu8374/Documents/MATLAB/Radiative_Transfer_Physics/Monte_Carlo/Monte_Carlo_Simulation_Results';
+
+
+
+elseif strcmp(whatComputer,'andrewbuggee')
+
+    saved_simulations = ['/Users/andrewbuggee/Documents/MATLAB/CU Boulder/Radiative_Transfer_Physics/',...
+        'Monte_Carlo/Monte_Carlo_Simulation_Results'];
+
+else
+    error('I dont recognize this computer user name')
+end
+
+
+if strcmp(pwd,saved_simulations)==false
+    cd(saved_simulations)
+end
+
+
+
+% Start figure
+figure;
+
+if smooth_curves==false
+
+    % Plot the raw PDF's
+
+    for nn = 1:length(filenames)
+
+
+        % Load a simulation
+        load(filenames{nn})
+
+
+
+        % First select those photons that were scattered out the top
+
+        index_scatter_out_top = final_state.scatter_out_top_INDEX;
+
+        [scatter_out_top_maxDepth_PDF, scatter_out_top_maxDepth_PDF_tau_edges] = ...
+            histcounts(photon_tracking.maxDepth(index_scatter_out_top),'Normalization',probability_str);
+
+
+
+        % Plot the conditional probability
+        plot(scatter_out_top_maxDepth_PDF,...
+            scatter_out_top_maxDepth_PDF_tau_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_tau_edges)/2, 'Color',C(nn,:))
+        hold on
+
+
+
+        % Create legend string
+        legend_str{nn} = ['$\lambda = ',num2str((wavelength(nn))),'$ nm'];
+
+
+
+
+    end
+
+
+
+else
+
+    % If this is true, we smooth each PDF to make a nice pretty plot, but
+    % at the expense of loosing the PDF (the smoothed functions likely
+    % won't integrate to 0)
+
+
+    for nn = 1:length(filenames)
+
+
+        % Load a simulation
+        load(filenames{nn})
+
+
+
+        % Compute the z component for the first wavelength
+        if nn==1
+            for ii = 1:length(inputs.dropletProfile.re)
+
+                if ii==1
+                    dz(ii) = inputs.dropletProfile.tau_layer_mid_points(ii)/...
+                        (inputs.Qe_avg(ii) * pi * (inputs.layerRadii(ii) * 1e-6)^2 * Nc*(1e6));
+
+                else
+                    dz(ii) = (inputs.dropletProfile.tau_layer_mid_points(ii) - inputs.dropletProfile.tau_layer_mid_points(ii-1))/...
+                        (inputs.Qe_avg(ii) * pi * (inputs.layerRadii(ii) * 1e-6)^2 * Nc*(1e6));
+
+                end
+
+            end
+
+            total_z_depth = sum(dz);
+        end
+
+    
+
+
+        % First select those photons that were scattered out the top
+
+        index_scatter_out_top = final_state.scatter_out_top_INDEX;
+
+        [scatter_out_top_maxDepth_PDF, scatter_out_top_maxDepth_PDF_tau_edges] = ...
+            histcounts(photon_tracking.maxDepth(index_scatter_out_top),'Normalization',probability_str);
+
+
+
+        % -------------------------------------------------------------
+        % Integrate the drolet profile with the weighting function to
+        % get an average effective radius measured, and thus an average
+        % optical depth.
+        % -------------------------------------------------------------
+        if nn==1 || nn==4 || nn==6 || nn==7
+            % create an re vector that is the same length as our weighting
+            % function
+            horizontal_line_index = [horizontal_line_index, nn];
+            new_tau = linspace(inputs.dropletProfile.tau_layer_mid_points(1), inputs.dropletProfile.tau_layer_mid_points(end), length(scatter_out_top_maxDepth_PDF));
+            re = interp1(inputs.dropletProfile.tau_layer_mid_points, inputs.dropletProfile.re, new_tau);
+            re_avg = trapz(new_tau, re .* scatter_out_top_maxDepth_PDF);
+            tau_avg(nn) = interp1(re, new_tau,re_avg);
+            
+            horizontal_label{nn} = ['Depth of retrieved $r_e$ for ',num2str(wavelength(nn)/1e3),' $\mu m$'];
+
+
+        end
+        % -------------------------------------------------------------
+        % -------------------------------------------------------------
+
+        % Create smooth spline function
+        f=fit((scatter_out_top_maxDepth_PDF_tau_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_tau_edges)/2)',scatter_out_top_maxDepth_PDF', 'smoothingspline','SmoothingParam',0.95);
+
+        % Plot the conditional probability
+        plot(f(scatter_out_top_maxDepth_PDF_tau_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_tau_edges)/2),...
+            scatter_out_top_maxDepth_PDF_tau_edges(1:end-1) + diff(scatter_out_top_maxDepth_PDF_tau_edges)/2, 'Color',C(nn,:))
+        hold on
+
+
+
+        % Create legend string
+        legend_str{nn} = ['$\lambda = ',num2str((wavelength(nn))),'$ nm'];
+
+
+
+
+    end
+
+
+
+
+
+
+
+end
+
+
+% horizontal line width
+horizontal_linewidth = 3;
+line_font_size = 22;
+
+for ii = 1:length(horizontal_line_index)
+
+
+    if rem(ii,2)~=0
+
+        % Plot line of constant average tau
+
+        yline(tau_avg(horizontal_line_index(ii)),'LineWidth',horizontal_linewidth, 'LineStyle',':','Color','k','Label',...
+            horizontal_label{horizontal_line_index(ii)}, 'Interpreter','latex',...
+            'FontSize',line_font_size,'LabelVerticalAlignment','middle', 'LabelHorizontalAlignment','right')
+
+
+    elseif rem(ii,2)==0
+
+        % Plot line of constant average tau
+
+        yline(tau_avg(horizontal_line_index(ii)),'LineWidth',horizontal_linewidth, 'LineStyle',':','Color','k','Label',...
+            horizontal_label{horizontal_line_index(ii)}, 'Interpreter','latex',...
+            'FontSize',line_font_size,'LabelVerticalAlignment','middle', 'LabelHorizontalAlignment','right')
+
+    end
+
+
+end
+
+
+
+
+
+
+% Set axes tick label font size
+set(gca,'FontSize',25)
+
+% Set up axes labels
+set(gca, 'YDir','reverse')
+grid on; grid minor
+xlabel('$P(\tau)$','Interpreter','latex', 'FontSize',35)
+ylabel('$\tau$','Interpreter','latex', 'FontSize',35)
+
+% Create title
+title({'Conditional probability of photons that scatter out cloud top',...
+    'reaching a max depth of $\tau$'},'Interpreter','latex', 'FontSize',40)
+
+
+% Create textbox with simulation properties
+
+% Textbox
+dim = [0.685 0.5 0 0];
+
+texBox_str = {['$N_{photons}^{total} = 10^{', num2str(log10(inputs.N_photons)),'}$'],...
+    ['N layers = ', num2str(inputs.N_layers)],...
+    ['$\mu_0$ = ',num2str(round(cosd(inputs.solar_zenith_angle),2))],...
+    ['$r_{top}$ = ',num2str(round(inputs.layerRadii(1))), ' $\mu m$'],...
+    ['$r_{bot}$ = ',num2str(round(inputs.layerRadii(end))), ' $\mu m$'],...
+    ['$\tau_0$ = ', num2str(inputs.tau_y_upper_limit)],...
+    ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
+t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
+t.Color = 'black';
+t.FontSize = 25;
+t.FontWeight = 'bold';
+t.EdgeColor = 'black';
+t.FitBoxToText = 'on';
+
+
+% Create Legend
+legend(legend_str,'Interpreter','latex','Location','best','FontSize',25)
+
+
+% Plot the z-space in meters on the right axis
+yyaxis right
+ylim([0, total_z_depth])
+set(gca,'YColor','black')
+ylabel('Altitude within cloud $(m)$', 'Interpreter','latex','FontSize',30); 
+yyaxis left
+
+% Label cloud top and cloud bottom
+% Create textbox
+annotation('textbox',...
+    [0.00638461538461519 0.0866666666666667 0.0913076923076923 0.0422222222222221],...
+    'String','Cloud Bottom',...
+    'LineStyle','none',...
+    'Interpreter','latex',...
+    'FontSize',22,...
+    'FontName','Helvetica Neue',...
+    'FitBoxToText','off');
+
+% Create textbox
+annotation('textbox',...
+    [0.00946153846153826 0.838888888888889 0.049769230769231 0.0666666666666665],...
+    'String','Cloud Top',...
+    'LineStyle','none',...
+    'Interpreter','latex',...
+    'FontSize',22,...
+    'FontName','Helvetica Neue',...
+    'FitBoxToText','off');
+
+
+
+
+set(gcf, 'Position',[0 0 1300 900])
+
+
+clear variables
+
+
+
+

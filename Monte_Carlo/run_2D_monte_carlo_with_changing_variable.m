@@ -17,7 +17,7 @@ clear variables
 
 
 % Define a set of wavelengths
-wavelength = [1450, 1550, 1750, 1850, 1950, 2250]; 
+wavelength = [625, 875, 1050, 1250, 1400, 1590, 1625, 1850, 1900, 2150, 2250]; 
 
 
 % Define a set of optical depths
@@ -42,7 +42,7 @@ for vv = 1:length(wavelength)
     % define the solar zenith angle
     % This is the angle of the incident radiation with respect to the medium
     % normal direction
-    inputs.solar_zenith_angle = 0;                  % deg from zenith
+    inputs.solar_zenith_angle = 45;                  % deg from zenith
 
 
     % Define the number of photons to inject into the medium
