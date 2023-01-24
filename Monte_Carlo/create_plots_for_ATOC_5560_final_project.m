@@ -1694,10 +1694,12 @@ set(gca,'YColor','black')
 ylabel('Altitude within cloud $(m)$', 'Interpreter','latex','FontSize',30); 
 yyaxis left
 
+
+
 % Label cloud top and cloud bottom
 % Create textbox
 annotation('textbox',...
-    [0.04 0.0866666666666667 0.0913076923076923 0.0422222222222221],...
+    [0.04 0.1 0.0913076923076923 0.0422222222222221],...
     'String','Cloud Bottom',...
     'LineStyle','none',...
     'Interpreter','latex',...
@@ -1707,13 +1709,14 @@ annotation('textbox',...
 
 % Create textbox
 annotation('textbox',...
-    [0.04 0.838888888888889 0.049769230769231 0.0666666666666665],...
+    [0.04 0.8 0.049769230769231 0.0666666666666665],...
     'String','Cloud Top',...
     'LineStyle','none',...
     'Interpreter','latex',...
     'FontSize',22,...
     'FontName','Helvetica Neue',...
     'FitBoxToText','off');
+
 
 
 
@@ -1917,7 +1920,7 @@ else
         % get an average effective radius measured, and thus an average
         % optical depth.
         % -------------------------------------------------------------
-        if nn==1 || nn==4 || nn==6 || nn==7
+        if nn==1 || nn==6 || nn==7
             % create an re vector that is the same length as our weighting
             % function
             horizontal_line_index = [horizontal_line_index, nn];
@@ -2042,7 +2045,7 @@ yyaxis left
 % Label cloud top and cloud bottom
 % Create textbox
 annotation('textbox',...
-    [0.00638461538461519 0.0866666666666667 0.0913076923076923 0.0422222222222221],...
+    [0.04 0.1 0.0913076923076923 0.0422222222222221],...
     'String','Cloud Bottom',...
     'LineStyle','none',...
     'Interpreter','latex',...
@@ -2052,7 +2055,7 @@ annotation('textbox',...
 
 % Create textbox
 annotation('textbox',...
-    [0.00946153846153826 0.838888888888889 0.049769230769231 0.0666666666666665],...
+    [0.04 0.8 0.049769230769231 0.0666666666666665],...
     'String','Cloud Top',...
     'LineStyle','none',...
     'Interpreter','latex',...
@@ -2067,6 +2070,114 @@ set(gcf, 'Position',[0 0 1300 900])
 
 
 clear variables
+
+
+
+
+
+
+%% Create Bar Chart Plot with Final States for Multiple files with Different Wavelenghts
+
+clear variables
+
+% Define the set of wavelengths used for this analysis
+Wavelength = [578, 1390];
+
+% Define the set of filenames to use
+filenames = {'2D_MC_04-Dec-2022_Wavelength_578_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat',...
+            '2D_MC_05-Dec-2022_Wavelength_1390_N-Photons_10000000_N-Layers_100_Tau0_16_SZA_0.mat'};
+
+% Set up matrix
+Y = zeros(length(Wavelength), 3);
+
+
+% set up legend string
+legend_str = cell(1, length(Wavelength));
+
+
+% Define a set of colors based on the number of files
+C = [0.979748378356085,   0.594896074008614,   0.117417650855806;...
+    0.438869973126103,   0.262211747780845,   0.296675873218327;...
+    0.111119223440599,   0.602843089382083,   0.318778301925882;...
+    0.8492724501845559,  0.05437108503990062, 0.9681090252965144;...
+    0.3563645953575846,  0.4380836048512262,  0.5147715889386915];
+
+
+
+for nn = 1:length(Wavelength)
+
+    % Clear the file variables because they take up a lot of memory
+    clear F_norm photon_tracking final_state inputs
+
+    % Load a simulation
+    load(filenames{nn},'final_state', 'inputs');
+
+    Y(nn,:) = [final_state.scatter_out_top, final_state.scatter_out_bottom, final_state.absorbed]./inputs.N_photons;
+
+
+    legend_str{nn} = ['$\lambda_0 = $',num2str((Wavelength(nn))), ' $nm$'];
+
+end
+
+
+figure;
+X = categorical({'Scatter out top','Scatter out Bottom','Absorbed'});
+
+b = bar(X,Y,'grouped');
+
+% Set up bar labels
+for nn = 1:length(Wavelength)
+    bar_label_xLocation = b(nn).XEndPoints;
+    bar_label_yLocation = b(nn).YEndPoints;
+    bar_labels = string(round(b(nn).YData, 2));
+    text(bar_label_xLocation,bar_label_yLocation,bar_labels,'HorizontalAlignment','center',...
+        'VerticalAlignment','bottom','FontSize',20,'FontWeight','bold','Interpreter','latex')
+    
+    % set bar color
+    b(nn).FaceColor = C(nn,:);
+end
+
+
+
+set(gca,'TickLabelInterpreter', 'latex','FontSize',25);
+set(gca, 'TitleFontSizeMultiplier',1.3)
+
+
+legend(legend_str,'Interpreter','latex','Location','southeast',...
+                'FontSize',22)
+
+
+grid on; grid minor
+ylabel('Percentage','Interpreter','latex')
+title('Probability of each final state', 'Interpreter','latex')
+
+
+set(gcf, 'Position',[0 0 1300 630])
+
+
+ylim([0 1])
+
+
+dim = [0.7 0.85 0 0];
+texBox_str = {['$N_{photons}^{total} = 10^{', num2str(log10(inputs.N_photons)),'}$'],...
+    ['N layers = ', num2str(inputs.N_layers)],...
+    ['$\tau_0$ = ',num2str(inputs.tau_y_upper_limit)],...
+    ['$\mu_0$ = ',num2str(round(cosd(inputs.solar_zenith_angle),2))],...
+    ['$r_{top}$ = ',num2str(round(inputs.layerRadii(1))), ' $\mu m$'],...
+    ['$r_{bot}$ = ',num2str(round(inputs.layerRadii(end))), ' $\mu m$'],...
+    ['$A_0$ = ', num2str(inputs.albedo_maxTau)]};
+t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
+t.Color = 'black';
+t.FontSize = 25;
+t.FontWeight = 'bold';
+t.EdgeColor = 'black';
+t.FitBoxToText = 'on';
+
+
+
+
+
+
 
 
 
