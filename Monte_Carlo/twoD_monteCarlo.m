@@ -1,7 +1,7 @@
 % 2-stream radiative transfer using Monte Carlo methods
 % by Andrew John Buggee
 
-function [F_norm, final_state, photon_tracking, inputs] = twoStream_2D_monteCarlo_withLivePlot(inputs)
+function [F_norm, final_state, photon_tracking, inputs] = twoD_monteCarlo(inputs)
 
 % ---------------------------------------
 % ------- Unpack input structure --------
@@ -160,44 +160,13 @@ absorbed_index = 0;
 
 
 % ----------------------------------------------------------------------
-% ************************* START LIVE PLOT ****************************
-% ----------------------------------------------------------------------
-
-
-figure;
-xline(0,'LineWidth',0.5,'Color','black')
-hold on;
-yline(0,'LineWidth',1.5,'Color','black')
-hold on
-yline(tau_y_upper_limit,'LineWidth',1.5,'Color','black')
-hold on;
-grid on; grid minor
-
-% Set figure position and size
-set(gcf, 'Position',[0 0 1000 630])
-
-ylim([-1,tau_y_upper_limit+1])
-xlim([-2*tau_y_upper_limit, 2*tau_y_upper_limit])
-title('Photon position','Interpreter','latex')
-xlabel('$\tau_x$','Interpreter','latex')
-ylabel('$\tau_y$','Interpreter','latex')
-
-set(gca,'YDir','reverse')
-
-% Set the text box location
-dim = [0.669538461538462 0.828134647212069 0.236083824157715 0.0985912584612054];
-
-drawnow
-
-
-% ----------------------------------------------------------------------
 % *** Inject photons into the medium and keep track of what happens! ***
 % ----------------------------------------------------------------------
 
 
 
 
-for nn = 1:N_photons
+parfor nn = 1:N_photons
 
 
 
@@ -553,14 +522,9 @@ for nn = 1:N_photons
                     % back into our medium
                     tau_sample = tau(rand(1,1));
 
+
                     % Compute the new position
                     photon_position_in_new_coordniates(end+1,:) = XandY(tau_sample, mu_vector(end));
-
-                    % We have to make sure this next photon path length
-                    % turns in the positive x direction in the new
-                    % coordniate space in order to keep in in the
-                    % medium
-                    photon_position_in_new_coordniates(end,1) = abs(photon_position_in_new_coordniates(end,1));
 
                     % ---------------------------------------------------------------------------------
                     % ** Determine if the previous transformation was clockwise or coutner-clockwise **
@@ -568,8 +532,6 @@ for nn = 1:N_photons
                     if photon_position_in_new_coordniates(end-1,1)<0
                         % If the x position is less than 0, we perform a counter-clockwise transformation
                         M_transformation = M_transformation * M_counterClockwise(mu_vector(end-1));
-
-                        
                     else
                         % If the x position is greater than 0, we perform a clockwise transformation
                         M_transformation = M_transformation * M_clockwise(mu_vector(end-1));
@@ -690,49 +652,6 @@ for nn = 1:N_photons
     % We also must ignore the last entry, since we are no longer
     % tracking scattering events outside the medium
     number_of_scattering_events(nn) = size(photon_tau_position{nn},1)-2;
-
-
-    % Make live plot!
-    % Create plot object 
-    p = zeros(1, size(photon_tau_position{nn},1));
-
-    for ff = 1:size(photon_tau_position{nn},1)-1
-
-    % Plot photon path
-    p(ff) = plot([photon_tau_position{nn}(ff,1), photon_tau_position{nn}(ff+1,1)],...
-              [photon_tau_position{nn}(ff,2), photon_tau_position{nn}(ff+1,2)]);
-    hold on
-
-
-    drawnow
-    pause(0.25)
-
-
-
-    end
-
-    % plot latest tally of absorbed and scattered photons
-    if exist('t', 'var')
-        delete(t)
-    end
-
-    texBox_str = {['Num Absorbed = ',num2str(absorbed)],...
-        ['Num Scattered Out Top = ',num2str(scatter_out_top )],...
-        ['Num Scattered Out Bottom = ',num2str(scatter_out_bottom)]};
-
-    t = annotation('textbox',dim,'string',texBox_str,'Interpreter','latex');
-    t.Color = 'black';
-    t.FontSize = 15;
-    t.FontWeight = 'bold';
-    t.EdgeColor = 'black';
-    t.FitBoxToText = 'on';
-
-    drawnow
-
-    % Clear figure and draw a new photon path
-    delete(p)
-
-
 
 
 
