@@ -417,8 +417,8 @@ set(gca,'FontSize',gca_ax_font_size)
 
 
 % Define 2 colors for these curves
-C1 = mySavedColors(8,'fixed');
-C2 = mySavedColors(9,'fixed');
+C2 = mySavedColors(8,'fixed');
+C1 = mySavedColors(9,'fixed');
 
 s2 = subplot(1,3,2);
 plot(inputs.g, inputs.dropletProfile.tau_layer_mid_points,'Color',C1,'LineStyle','-','LineWidth',2)
@@ -439,12 +439,8 @@ set(gca,'FontSize',gca_ax_font_size)
 
 
 
-% ----  plot single scattering albedo in the second subfigure -----
+% ----  plot single scattering albedo in the third subfigure -----
 
-
-% Define 2 colors for these curves
-C1 = mySavedColors(8,'fixed');
-C2 = mySavedColors(9,'fixed');
 
 s3 = subplot(1,3,3);
 plot(inputs.ssa, inputs.dropletProfile.tau_layer_mid_points,'Color',C1,'LineStyle','-','LineWidth',2)

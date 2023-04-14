@@ -1,7 +1,7 @@
 % 2-stream radiative transfer using Monte Carlo methods
 % by Andrew John Buggee
 
-function [F_norm, final_state, photon_tracking, inputs] = twoStream_2D_monteCarlo(inputs)
+function [F_norm, final_state, photon_tracking, inputs] = twoD_monteCarlo(inputs)
 
 % ---------------------------------------
 % ------- Unpack input structure --------
