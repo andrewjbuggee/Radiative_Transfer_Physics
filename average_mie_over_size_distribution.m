@@ -105,7 +105,7 @@ if strcmp(size_distribution, 'gamma')==true
 
 
         b = mu/r_eff(ii);                                   % exponent parameter
-        N = mu^(mu+1)/(gamma(mu+1) * r_eff(ii)^(mu+1));  % normalization constant
+        N = mu^(mu+1)/(gamma(mu+1) * r_eff(ii)^(mu+1));     % normalization constant
 
         n_r = N*r.^mu .* exp(-b*r);                            % gamma droplet distribution
 
@@ -117,13 +117,16 @@ if strcmp(size_distribution, 'gamma')==true
                        trapz(r, ds.Qext .* n_r);
 
         % Compute the average asymmetry parameter over a size distribution
-
-        g_avg(ii) = trapz(r, ds.asymParam .* n_r);
+    
+        
+        g_avg(ii) = trapz(r, ds.asymParam .* n_r)./...
+                    trapz(r, n_r);
         
         % Compute the average extinction efficiency over a droplet size
-        % distributino
+        % distribution
 
-        Qe_avg(ii) = trapz(r, ds.Qext .* n_r);
+        Qe_avg(ii) = trapz(r, ds.Qext .* n_r)./...
+                    trapz(r, n_r);
 
 
     end
