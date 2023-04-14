@@ -179,10 +179,12 @@ set(gcf, 'Position',[0 0 1000 630])
 ylim([-1,tau_y_upper_limit+1])
 xlim([-2*tau_y_upper_limit, 2*tau_y_upper_limit])
 title('Photon position','Interpreter','latex')
-xlabel('$\tau_x$','Interpreter','latex')
-ylabel('$\tau_y$','Interpreter','latex')
+xlabel('$\tau_x$','Interpreter','latex', 'FontSize',32);
+ylabel('$\tau_y$','Interpreter','latex', 'FontSize',32);
 
 set(gca,'YDir','reverse')
+set(gca,'FontSize',20)
+
 
 % Set the text box location
 dim = [0.669538461538462 0.828134647212069 0.236083824157715 0.0985912584612054];
@@ -700,12 +702,13 @@ for nn = 1:N_photons
 
     % Plot photon path
     p(ff) = plot([photon_tau_position{nn}(ff,1), photon_tau_position{nn}(ff+1,1)],...
-              [photon_tau_position{nn}(ff,2), photon_tau_position{nn}(ff+1,2)]);
+              [photon_tau_position{nn}(ff,2), photon_tau_position{nn}(ff+1,2)], ...
+              'LineWidth',6);
     hold on
 
 
     drawnow
-    pause(0.25)
+    pause(0.2)
 
 
 
