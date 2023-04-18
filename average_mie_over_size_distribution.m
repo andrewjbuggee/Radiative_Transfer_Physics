@@ -1,25 +1,77 @@
 %% Integrate mie calculation for a single radii over a size distribution
 
+% INPUTS:
+
+%   (1) r_modal - the modal radius of the droplet distribution. This is
+%   NOT the ratio of the third moment of the droplet distribution to
+%   the second moment. This is the most common radius observed in a large
+%   random sampling of n(r), the size distribution. It is used to define
+%   the droplet distributions most likely observed outcome.
+
+%   (2) dist_var - the variance of the droplet distribution. A typical
+%   value used for liquid water clouds is 7
+
+%   (3) wavelength - (nanometers) this is the wavelength range used to calculate
+%   the mie properties across the size distribution. If wavelength is a
+%   single value, then a monochromatic calculation is performed. If
+%   wavelength is a vector with 3, then the first two are the boundaries
+%   and the 3rd value is the discrete step between the two boundaries.
+
+%   (4) index_of_refraction - this is the index of refraction used in the
+%       scattering calculations, effectively telling the code which substance
+%       to use. Options are:
+%       (a) 'water' - this is an optional string input for libRadTran
+%       (b) 'ice' - this is an optional string input for libRadTran
+%       (c) a + bi - this numeric option should include a real and
+%       imaginary component. One mie calculation will be run for each row
+%       of numeric input - thus a new mie file for each substance
+
+%   (5) size_distribution - this is a string that tells the code which type
+%   of size distribution to integrate over. The options are:
+%       (a) 'gamma' - gamma droplet distribution 
+
+% OUTPUTS:
+% (1) ssa_avg - single scattering albedo averaged over all drop sizes
+% within the distribution defined
+
+% (2) Qe_avg - extinction coefficient averaged over all drop sizes
+% within the distribution defined
+
+% (3) g_avg - asymmetry averaged over all drop sizes
+% within the distribution defined
+
+
+
 
 % By Andrew John Buggee
 %%
 
-function [ssa_avg, Qe_avg, g_avg] = average_mie_over_size_distribution(ssa, g, Qe, r_eff, dist_var, wavelength, index_of_refraction, size_distribution)
+function [ssa_avg, Qe_avg, g_avg] = average_mie_over_size_distribution(r_eff, dist_var, wavelength,...
+                                                                       index_of_refraction, size_distribution)
 
 % ---------------------------
 % ----- CHECK INPUTS --------
 % ---------------------------
 
-% Each of the 4 inputs must be the same length
-N(1) = length(ssa);
-N(2) = length(g);
-N(3) = length(Qe);
-N(4) = length(r_eff);
-N(5) = length(dist_var);
+% The length of r_eff defines the number of unique droplet distributions. 
+% The length of the distribution variance must be the same length as the
+% effective radius
 
-if all(N==N(1))~=true
-    error([newline, 'The first four inputs must be the same length',newline])
+
+% For the remaining entries, make sure they all have the same length as the
+% length of the effective radius vector
+if length(r_eff)~=length(dist_var)
+    error([newline, 'The first two inputs must be the same length',newline])
 end
+
+
+% Check the wavelength input. This can only be a single value, or a vector
+% with three values
+if length(wavelength)~=1 && length(wavelength)~=3
+    error([newline, 'The wavelength input can only be a single value, implying a monochromatic calculation',...
+        newline, ', or have 3 values: the starting value, the end value, and the sampling interval',newline])
+end
+
 
 
 % ==============================
@@ -56,7 +108,14 @@ if strcmp(size_distribution, 'gamma')==true
     % define the wavelength
     % The wavelength input is defined as follows:
     % [wavelength_start, wavelength_end, wavelength_step].
-    wavelength = [wavelength, wavelength, 0];          % nanometers
+    if length(wavelength)==1
+        % monochromatic calculation
+        wavelength = [wavelength, wavelength, 0];          % nanometers
+    elseif length(wavelength)==3
+        % broadband calculation
+        wavelength = [wavelength(1), wavelength(2), wavelength(3)];          % nanometers
+    end
+
 
     % The first entry belows describes the type of droplet distribution
     % that should be used. The second describes the distribution width. If
