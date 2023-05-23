@@ -14,7 +14,7 @@
 %   (3) wavelength - (nanometers) this is the wavelength range used to calculate
 %   the mie properties across the size distribution. If wavelength is a
 %   single value, then a monochromatic calculation is performed. If
-%   wavelength is a vector with 3, then the first two are the boundaries
+%   wavelength is a vector with 3 entries, then the first two are the boundaries
 %   and the 3rd value is the discrete step between the two boundaries.
 
 %   (4) index_of_refraction - this is the index of refraction used in the
@@ -28,7 +28,7 @@
 
 %   (5) size_distribution - this is a string that tells the code which type
 %   of size distribution to integrate over. The options are:
-%       (a) 'gamma' - gamma droplet distribution 
+%       (a) 'gamma' - gamma droplet distribution
 
 % OUTPUTS:
 % (1) ssa_avg - single scattering albedo averaged over all drop sizes
@@ -47,13 +47,13 @@
 %%
 
 function [ssa_avg, Qe_avg, g_avg] = average_mie_over_size_distribution(r_eff, dist_var, wavelength,...
-                                                                       index_of_refraction, size_distribution)
+    index_of_refraction, size_distribution)
 
 % ---------------------------
 % ----- CHECK INPUTS --------
 % ---------------------------
 
-% The length of r_eff defines the number of unique droplet distributions. 
+% The length of r_eff defines the number of unique droplet distributions.
 % The length of the distribution variance must be the same length as the
 % effective radius
 
@@ -111,9 +111,13 @@ if strcmp(size_distribution, 'gamma')==true
     if length(wavelength)==1
         % monochromatic calculation
         wavelength = [wavelength, wavelength, 0];          % nanometers
+        % define the wavelength vector
+        wl_vector = wavelength(1);               % nanometers
     elseif length(wavelength)==3
         % broadband calculation
         wavelength = [wavelength(1), wavelength(2), wavelength(3)];          % nanometers
+        % define the wavelength vector
+        wl_vector = wavelength(1):wavelength(3):wavelength(2);               % nanometers
     end
 
 
@@ -154,39 +158,46 @@ if strcmp(size_distribution, 'gamma')==true
     % -----------------------------------------------------------------
 
 
+
     % Step through each modal radius and compute the average over the size
     % distribution
+    for rr = 1:length(r_eff)
 
-    for ii = 1:length(r_eff)
-
-        mu = dist_var(ii)+3;                                            % to ensure I have the correct gamma distribution
-
+        mu = dist_var(rr)+3;                                            % to ensure I have the correct gamma distribution
 
 
-        b = mu/r_eff(ii);                                   % exponent parameter
-        N = mu^(mu+1)/(gamma(mu+1) * r_eff(ii)^(mu+1));     % normalization constant
+
+        b = mu/r_eff(rr);                                   % exponent parameter
+        N = mu^(mu+1)/(gamma(mu+1) * r_eff(rr)^(mu+1));     % normalization constant
 
         n_r = N*r.^mu .* exp(-b*r);                            % gamma droplet distribution
 
 
 
-        % Average single scattering albedo over a droplet distribution
+        % step through each wavelength. At each wavelength we integrate over
+        % the vector r, a range of droplet sizes
 
-        ssa_avg(ii) = trapz(r, ds.Qsca .* n_r)./...
-                       trapz(r, ds.Qext .* n_r);
+        for ww = 1:length(wl_vector)
 
-        % Compute the average asymmetry parameter over a size distribution
-    
-        
-        g_avg(ii) = trapz(r, ds.asymParam .* n_r)./...
-                    trapz(r, n_r);
-        
-        % Compute the average extinction efficiency over a droplet size
-        % distribution
+            % Average single scattering albedo over a droplet distribution
 
-        Qe_avg(ii) = trapz(r, ds.Qext .* n_r)./...
-                    trapz(r, n_r);
+            ssa_avg(ww,rr) = trapz(r, ds.Qsca(ww,:) .* n_r)./...
+                trapz(r, ds.Qext(ww,:) .* n_r);
 
+            % Compute the average asymmetry parameter over a size distribution
+
+
+            g_avg(ww,rr) = trapz(r, ds.asymParam(ww,:) .* n_r)./...
+                trapz(r, n_r);
+
+            % Compute the average extinction efficiency over a droplet size
+            % distribution
+
+            Qe_avg(ww,rr) = trapz(r, ds.Qext(ww,:) .* n_r)./...
+                trapz(r, n_r);
+
+
+        end
 
     end
 
