@@ -140,7 +140,21 @@ if strcmp(size_distribution, 'gamma')==true
     % where r_step is the interval between radii values (used only for
     % vectors of radii). A 0 tells the code there is no step. Finally, the
     % radius values have to be in increasing order.
-    mie_radius = [r(1), r(end), r(2) - r(1)];    % microns
+
+    % **** This often creates a vector less than the original length ***
+    % This happens due to rounding errors. Check to make sure this doesn't
+    % happen
+    
+    radius_step = mean(diff(r));
+
+    % check the length
+    while numel(r(1):radius_step:r(end))~=numel(r)
+
+        radius_step = radius_step - 1e-15;
+
+    end
+
+    mie_radius = [r(1), r(end), radius_step];    % microns
 
 
 
@@ -163,14 +177,21 @@ if strcmp(size_distribution, 'gamma')==true
     % distribution
     for rr = 1:length(r_eff)
 
-        mu = dist_var(rr)+3;                                            % to ensure I have the correct gamma distribution
 
+      % set the total number concentration to be 1
+        N0 = 1;
+        
+        % ---------------- IMPORTANT ASSUMPTION -------------------
+        % the modal radius is usually less than the effective radius
+        r_modal = 0.95*r_eff(rr);
+        
+        N = dist_var(rr)^(dist_var(rr)+1)/(gamma(dist_var(rr)+1) * r_modal^(dist_var(rr)+1));  % normalization constant
+        
+        n_r = N0 * N * r.^dist_var(rr) .* exp(-dist_var(rr)*r/r_modal);                            % gamma droplet distribution
 
+  
 
-        b = mu/r_eff(rr);                                   % exponent parameter
-        N = mu^(mu+1)/(gamma(mu+1) * r_eff(rr)^(mu+1));     % normalization constant
-
-        n_r = N*r.^mu .* exp(-b*r);                            % gamma droplet distribution
+        %[n_r,r] = gamma_size_distribution_kokhanovsky(r_eff(rr), mu, N0);
 
 
 
