@@ -22,7 +22,7 @@
 
 %%
 
-function [nr_fit, mu, var_coef, min_rms] = fit_gamma_size_distribution_kokhanovsky(nr_data, r)
+function [nr_fit, fit_parameters] = fit_gamma_size_distribution_kokhanovsky(nr_data, r)
 
 % ------------------------------------------------------------
 % ---------------------- CHECK INPUTS ------------------------
@@ -45,7 +45,7 @@ end
 
 
 
-%% using the independent vector provide, compute the gamma distribution for many alpha and r0 values
+%% using the independent vector provided, compute the gamma distribution for many alpha and r0 values
 % This definition follows the definition of A. Kokhonovsky in 'Cloud
 % Optics' on page 2
 
@@ -53,42 +53,135 @@ end
 r = reshape(r, [],1);
 nr_data = reshape(nr_data, [], 1);
 
-% lets find the modal radius
-[~,idx] = max(nr_data);
-r_modal = r(idx);
-
 % Compute the total number of droplets
 N0 = trapz(r, nr_data);
 
-mu_fit = 1:0.1:50;            % values of mu to test
 
 
-N = mu_fit.^(mu_fit+1)./(gamma(mu_fit+1) .* r_modal.^(mu_fit+1));  % normalization constant
+
+% ----------------------------------------------------------
+% -------------- For varrying just mu_fit ------------------
+% ----------------------------------------------------------
+
+% % define the range of mu values to check
+% mu_fit = 1:0.01:50;            % values of mu to test
+% 
+% % Compute the gamma distribution for varrying values of mu
+% 
+% % lets find the modal radius
+% [~,idx] = max(nr_data);
+%  r_modal = r(idx);
+% 
+% 
+% N = mu_fit.^(mu_fit+1)./(gamma(mu_fit+1) .* r_modal.^(mu_fit+1));  % normalization constant
+% 
+% 
+% nr_fits = N0 * N .* r.^mu_fit .* exp(-mu_fit .*r ./r_modal);                            % gamma droplet distribution
+% 
+% rms_diff = sqrt(sum(( repmat(nr_data, 1, numel(mu_fit)) - nr_fits).^2, 1));
+% 
+% % find the mu value associated with the minimum rms difference
+% [fit_parameters.min_rms, min_idx] = min(rms_diff, [], 'all');
+% 
+% 
+% % Grab the mu value and the nr_fit associated with the minimum rms 
+% 
+% fit_parameters.mu = mu_fit(min_idx);
+% fit_parameters.var_coef = 1/sqrt(1+ fit_parameters.mu);
+% nr_fit = nr_fits(:, min_idx);
+% -------------------------------------------------------------------------------
+% -------------------------------------------------------------------------------
 
 
-% Compute the fit for the first 100 values of mu
-nr_fits = zeros(numel(r), numel(mu_fit));
 
-rms_diff = zeros(1, numel(mu_fit));
 
-for nn = 1:numel(mu_fit)
-    nr_fits(:, nn) = N0 * N(nn) .* r.^mu_fit(nn) .* exp(-mu_fit(nn)*r./r_modal);                            % gamma droplet distribution
+
+% ----- For varrying r_modal and mu_fit --------
+
+% define a short range a mu values, we will interpolate later
+mu_fit = 1:100;            % values of mu to test
+
+% compute the gamma distribution for different values of mu and r_modal
+r_modal = 1:60;        % microns
+
+% use this to run a loop with changing r_modal values
+[Mu, R_modal] = meshgrid(mu_fit, r_modal);
+
+
+%nr_fits = zeros(numel(r), numel(mu_fit), numel(r_modal));
+
+rms_diff = zeros(numel(r_modal), numel(mu_fit));
+
+for nn = 1:numel(r_modal)
+    
+    N = mu_fit.^(mu_fit+1)./(gamma(mu_fit+1) .* r_modal(nn).^(mu_fit+1));  % normalization constant
+
+    nr_fits = N0 * N .* r.^mu_fit .* exp(-mu_fit .*r./r_modal(nn));                            % gamma droplet distribution
 
     % Find the least squares difference between the fit true data
 
-    rms_diff(nn) = sqrt(sum((nr_data - nr_fits(:,nn)).^2, 1));
+    rms_diff(nn,:) = sqrt(sum(( repmat(nr_data, 1, numel(mu_fit)) - nr_fits).^2, 1));
 
 end
 
 
 
-% find the mu value associated witht he minimum rms difference
-[min_rms, min_idx] = min(rms_diff);
+% find the mu value associated with the minimum rms difference
+[~, first_min_idx] = min(rms_diff, [], 'all');
+first_min_mu = Mu(first_min_idx);
+first_min_r_modal = R_modal(first_min_idx);
+
+
+% ---------------------------------------------------------------
+% ------- REFINE THE SOLUTION BY RUNNING ANOTHER SEARCH ---------
+% ---------------------------------------------------------------
+
+% Let's run a more refined search with the bounds surrounding the minimum
+% value found above
+% define a range of values around the minimum point found above
+mu_fit = linspace(0.9*first_min_mu, 1.1*first_min_mu, 1000);            % values of mu to test
+
+% compute the gamma distribution for different values of mu and r_modal
+r_modal = linspace(0.5 * first_min_r_modal, 1.5 * first_min_r_modal, 1000);        % microns
+
+% use this to run a loop with changing r_modal values
+[Mu, R_modal] = meshgrid(mu_fit, r_modal);
+
+
+rms_diff = zeros(numel(r_modal), numel(mu_fit));
+
+for nn = 1:numel(r_modal)
+    
+    N = mu_fit.^(mu_fit+1)./(gamma(mu_fit+1) .* r_modal(nn).^(mu_fit+1));  % normalization constant
+
+    nr_fits = N0 * N .* r.^mu_fit .* exp(-mu_fit .*r./r_modal(nn));                            % gamma droplet distribution
+
+    % Find the least squares difference between the fit true data
+
+    rms_diff(nn,:) = sqrt(sum(( repmat(nr_data, 1, numel(mu_fit)) - nr_fits).^2, 1));
+
+end
+
+
+
+% find the mu value associated with the minimum rms difference
+[fit_parameters.min_rms, min_idx] = min(rms_diff, [], 'all');
+
 
 % Grab the mu value and the nr_fit associated with the minimum rms 
-mu = mu_fit(min_idx);
-var_coef = 1/sqrt(1+mu);
-nr_fit = nr_fits(:, min_idx);
+fit_parameters.mu = Mu(min_idx);
+fit_parameters.r_modal = R_modal(min_idx);
+fit_parameters.var_coef = 1/sqrt(1+ fit_parameters.mu);
+
+% Now make the fit with the parameters found above
+N = fit_parameters.mu.^(fit_parameters.mu+1)./(gamma(fit_parameters.mu+1) .*...
+    fit_parameters.r_modal.^(fit_parameters.mu+1));  % normalization constant
+
+nr_fit = N0 * N .* r.^fit_parameters.mu .* exp(-fit_parameters.mu .*r./fit_parameters.r_modal);                            % gamma droplet distribution
+
+
+% -------------------------------------------------------------------------------
+% -------------------------------------------------------------------------------
 
 
 

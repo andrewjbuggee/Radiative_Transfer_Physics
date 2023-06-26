@@ -2,7 +2,7 @@
 
 % this function takes in a vector of wavelength values, and a vector of
 % temperature values and computes the plank function, which defines the
-% amount of radiance
+% amount of radiance 
 
 % ----- inputs -----
 
