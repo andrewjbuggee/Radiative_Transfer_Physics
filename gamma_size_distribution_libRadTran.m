@@ -1,4 +1,4 @@
-% Create a gamma particle size distribution
+% Create a gamma particle size distribution using the libRadTran definition
 
 % INPUTS:
 %   (1) r_modal - modal radius (microns) - this is a single value
@@ -6,7 +6,7 @@
 %   randomly sampled our gamma particle size distribution a large number of
 %   times
 
-%   (2) sigma0 - This is the effective variance
+%   (2) alpha - This is the effective variance
 
 %   (3) N0 - total droplet concentration (cm^(-3)) - this is the total
 %   droplet number concentration including all sizes. If n(r) is integrated
@@ -24,7 +24,7 @@
 
 %%
 
-function [n_r,r] = gamma_size_distribution_libRadTran(r_modal, sigma0, N0)
+function [n_r,r] = gamma_size_distribution_libRadTran(r_modal, alpha, N0)
 
 % ------------------------------------------------------------
 % ---------------------- CHECK INPUTS ------------------------
@@ -74,10 +74,24 @@ end
 r = linspace(0.001*r_modal, 7*r_modal, 200);                  % microns - vector based on C.Emde (2016)
 
 
-%N = 1/(gamma(1/sigma0 -2) * (r_modal*sigma0)^(1/sigma0 -2));  % normalization constant
-N = sigma0^(sigma0+1)/(gamma(sigma0+1) * r_modal^(sigma0+1));  % normalization constant
 
-n_r = N0 * N * r.^(1/sigma0 -3) .* exp(-r./(r_modal * sigma0));                            % gamma droplet distribution
+% ----- This one below seems to work
+% N = alpha^(alpha+1)/(gamma(alpha+1) * r_modal^(alpha+1));  % normalization constant
+% 
+% n_r = N0 * N * r.^(1/alpha -3) .* exp(-r./(r_modal * alpha));      
+
+
+
+% according to C. Emde et al. 2016
+b = 1/(alpha + 3);
+
+% --- I can't get this normalization to work! -----
+%N = b^(b+1)/(gamma(b+1) * r_modal^(b+1));  % normalization constant
+
+% Let's cheat
+N = 1/trapz(r, r.^alpha .* exp(-r./(r_modal * b)));
+
+n_r = N0 * N * r.^alpha .* exp(-r./(r_modal * b));                            % gamma droplet distribution
 
 
 
