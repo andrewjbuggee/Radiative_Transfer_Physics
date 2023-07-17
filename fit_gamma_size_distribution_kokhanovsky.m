@@ -8,14 +8,15 @@
 %   (2) r - this is the independent vector associated with the distribution
 %   data nr_data. It must be in units of microns.
 
-%   (3) 
+%   
 
 % OUTPUTS:
-%   (1) n(r) - the number concentration of droplets for a given radius r -
-%   this output is a vector of the same length as r, which is a hard-coded
-%   vector
+%   (1) nr_fit - this is a vector of the best fit found. It represents the
+%   droplet distribution data using the best fit parameters
 
-%   (2) r - the independent variable to defines our distribution n(r). 
+%   (2) fit_parameters - the modal radius, the effective varaiance, the RMS 
+%   difference between the data and the best fit, and the variance
+%   coefficient.
 
 
 % By Andrew John Buggee
@@ -169,7 +170,7 @@ end
 
 
 % Grab the mu value and the nr_fit associated with the minimum rms 
-fit_parameters.mu = Mu(min_idx);
+fit_parameters.mu = Mu(min_idx);                % my value (effective varaince?)
 fit_parameters.r_modal = R_modal(min_idx);
 fit_parameters.var_coef = 1/sqrt(1+ fit_parameters.mu);
 

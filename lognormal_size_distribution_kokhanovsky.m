@@ -1,4 +1,4 @@
-% Create a gamma particle size distribution
+% Create a lognoraml particle size distribution
 
 % INPUTS:
 %   (1) radius_modal - modal radius (microns) - this is a single value
@@ -6,9 +6,8 @@
 %   randomly sampled our gamma particle size distribution a large number of
 %   times
 
-%   (2) std_dev - the standard deviation of the logarithmic values. It
-%   defines the width of the distribution. This has to be greater than or
-%   equal to 0
+%   (2) std_dev - the standard deviation. It defines the width of the 
+%   distribution. This has to be greater than 0.
 
 %   (3) N0 - total droplet concentration (cm^(-3)) - this is the total
 %   droplet number concentration including all sizes. If n(r) is integrated
@@ -41,29 +40,29 @@ if nargin~=3
 end
 
 
-%Check to make sure mu is greater than 1
+%Check to make sure the standard deviation is greater than 0
 
-if std_dev<0
+if std_dev<=0
 
-    error([newline,'The standard deviation cannot be less than 0', newline])           % says who?
+    error([newline,'The standard deviation must be greater than 0', newline])           % says who?
 end
 
 
 
 
-if N0<0
+if N0<=0
     
     error([newline,'The number concentration must be greater than 0!', newline])
 end
 
-if radius_modal<0
+if radius_modal<=0
     
     error([newline,'The effective droplet radius must be greater than 0!',newline])
 end
 
 %% Define the gamma distribution
 % This definition follows the definition of A. Kokhonovsky in 'Cloud
-% Optics' on page 2
+% Optics' on page 5, equation 1.21
 
 % For some modal radius, we have define a droplet size distribution over a
 % range of radii values
