@@ -5,6 +5,9 @@
 
 % By Andrew John Buggee
 
+% save results in the following folder
+inputs.folder_name_2save = 'Monte_Carlo_Simulation_Results';
+
 % ----------------------------------------------------------------------
 % --------------------- DEFINE CHANGING VARIABLE -----------------------
 % ----------------------------------------------------------------------
@@ -13,17 +16,21 @@ clear variables
 % define the solar zenith angle
 % This is the angle of the incident radiation with respect to the medium
 % normal direction
-%solar_zenith_angle = 20:10:70;                  % deg from zenith
+solar_zenith_angle = 0:10:70;                  % deg from zenith
 
 
 % Define a set of wavelengths
-wavelength = [625, 875, 1050, 1250, 1400, 1590, 1625, 1850, 1900, 2150, 2250]; 
+% wavelength = modisBands(1:7);
+% wavelength = wavelength(:,1);   % Center wavelengths of the first 7 MODIS bands
 
+% define a single wavelength
+wavelength = modisBands(7);
+wavelength = wavelength(1);             % center wavelength of the 7th MODIS band
 
 % Define a set of optical depths
 %Tau = [2, 4, 16, 32];
 
-for vv = 1:length(wavelength)
+for vv = 1:length(solar_zenith_angle)
 
 
     clear F_norm final_state input_filename inputs mie_folder output_filename photon_tracking
@@ -34,7 +41,7 @@ for vv = 1:length(wavelength)
 
     % Define the boundaries of the medium
     inputs.tau_y_lower_limit = 0;
-    inputs.tau_y_upper_limit = 16;
+    inputs.tau_y_upper_limit = 15;
 
     % Define the albedo of the bottom boundary (tau upper limit)
     inputs.albedo_maxTau = 0;
@@ -42,7 +49,7 @@ for vv = 1:length(wavelength)
     % define the solar zenith angle
     % This is the angle of the incident radiation with respect to the medium
     % normal direction
-    inputs.solar_zenith_angle = 45;                  % deg from zenith
+    inputs.solar_zenith_angle = solar_zenith_angle(vv);                  % deg from zenith
 
 
     % Define the number of photons to inject into the medium
@@ -71,7 +78,7 @@ for vv = 1:length(wavelength)
 
         % This options creates a simple cloud with a linear droplet profile
         % or a homogenous cloud with a single radii
-        inputs.layerRadii = linspace(25,5,10);      % radius of spheres in each layer
+        inputs.layerRadii = linspace(9,4.5,10);      % microns - radius of spheres in each layer
 
 
         % Define the number of layers and the boundaries values for each tau
@@ -95,8 +102,8 @@ for vv = 1:length(wavelength)
         inputs.dropletProfile.constraint = 'adiabatic';
 
         % Define the radius value at cloud top and cloud bottom
-        inputs.dropletProfile.r_top = 12;            % microns
-        inputs.dropletProfile.r_bottom = 5;          % microns
+        inputs.dropletProfile.r_top = 9;            % microns
+        inputs.dropletProfile.r_bottom = 4.5;          % microns
 
         % define the number of layers to model within the cloud
         inputs.dropletProfile.N_layers = 100;
@@ -326,12 +333,11 @@ for vv = 1:length(wavelength)
 
         % Define the distribution variance, depending on the distribution type used
         % Has to be the same length as the numer of layers in our medium
-        inputs.mie.dist_var = linspace(7,7,length(inputs.ssa));           % Typically value for liquid water clouds
+        inputs.mie.dist_var = linspace(10,10,length(inputs.ssa));           % Typically value for liquid water clouds
 
         % Compute the average value for the single scattering albedo over a size
         % distribution
-        [inputs.ssa_avg, inputs.Qe_avg, inputs.g_avg] = average_mie_over_size_distribution(inputs.ssa, inputs.g,...
-            inputs.Qe,inputs.layerRadii,inputs.mie.dist_var, inputs.mie.wavelength(1),...
+        [inputs.ssa_avg, inputs.Qe_avg, inputs.g_avg] = average_mie_over_size_distribution(inputs.layerRadii,inputs.mie.dist_var, inputs.mie.wavelength(1),...
             inputs.mie.indexOfRefraction, inputs.mie.size_dist);
 
 
@@ -340,7 +346,7 @@ for vv = 1:length(wavelength)
 
     %% Run 2 stream 2D monte carlo code
     tic
-    [F_norm, final_state, photon_tracking, inputs] = twoStream_2D_monteCarlo(inputs);
+    [F_norm, final_state, photon_tracking, inputs] = twoD_monteCarlo(inputs);
     toc
 
 
@@ -348,7 +354,6 @@ for vv = 1:length(wavelength)
     %% Do you want to save you results?
 
     % save in the following folder
-    inputs.folder_name_2save = 'Monte_Carlo_Simulation_Results';
     cd(inputs.folder_name_2save)
     save(['2D_MC_',char(datetime('today')),'_Wavelength_',num2str(inputs.mie.wavelength(1)),...
         '_N-Photons_',num2str(inputs.N_photons),'_N-Layers_',num2str(inputs.N_layers),...
