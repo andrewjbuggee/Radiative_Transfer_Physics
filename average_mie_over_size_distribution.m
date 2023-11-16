@@ -47,7 +47,7 @@
 %%
 
 function [ssa_avg, Qe_avg, g_avg] = average_mie_over_size_distribution(r_eff, dist_var, wavelength,...
-    index_of_refraction, size_distribution)
+    index_of_refraction, size_distribution, index)
 
 % ---------------------------
 % ----- CHECK INPUTS --------
@@ -168,7 +168,7 @@ if strcmp(size_distribution, 'gamma')==true
 
     % Create a mie file
     [input_filename, output_filename, mie_folder] = write_mie_file(mie_program, index_of_refraction,...
-        mie_radius,wavelength,size_distribution, err_msg_str);
+        mie_radius,wavelength,size_distribution, err_msg_str, index);
 
     % run the mie file
     [~] = runMIE(mie_folder,input_filename,output_filename);
