@@ -97,8 +97,9 @@ if inputs.N_layers==1
 
             % K is defined in Bohren and Clothiaux (eq. 5.70)
             K = sqrt((1 - ssa)*(1 - g*ssa));
-            % Define the reflectivity at the top of our layer, the photons that
-            % scatter out the cloud top
+            % Define the reflectivity at the top of a semi-infinite cloud
+            % R_inf = F_up(tau=0)/F_0 
+            % This is the fraction of light that scatters out the cloud top
             R_inf = (sqrt(1-ssa*g) - sqrt(1 - ssa))/(sqrt(1-ssa*g) + sqrt(1 - ssa));
 
             % Define the constants
