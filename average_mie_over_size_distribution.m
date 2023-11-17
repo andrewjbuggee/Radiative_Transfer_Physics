@@ -30,6 +30,10 @@
 %   of size distribution to integrate over. The options are:
 %       (a) 'gamma' - gamma droplet distribution
 
+%   (6) index - the number associated with the file that is being written.
+%   This is for naming purposes so that there are unique files written, but
+%   only just enough.
+
 % OUTPUTS:
 % (1) ssa_avg - single scattering albedo averaged over all drop sizes
 % within the distribution defined
